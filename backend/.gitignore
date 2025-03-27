@@ -1,0 +1,16 @@
+# 🔒 Variables de entorno
+.env
+
+# 📦 Dependencias
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# 🚫 Archivos de build
+frontend/dist
+
+# 🧪 Logs
+*.log
+
+# 💻 Archivos del sistema
+.DS_Store
