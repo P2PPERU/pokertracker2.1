@@ -45,18 +45,22 @@ import _ from 'lodash';
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
 
-  // Gradiente principal (puedes ajustar estos colores a tu gusto)
+  // Extraemos los valores de useColorModeValue de forma incondicional
   const mainGradient = useColorModeValue(
     "linear(to-r, #5D5FEF, #6A76FB)", 
     "linear(to-r, #5D5FEF, #6A76FB)"
   );
-
-  // Fondo de la tarjeta contenedora (box)
   const cardBg = useColorModeValue("white", "gray.800");
   const suggestionBg = useColorModeValue("white", "gray.700");
   const suggestionBorderColor = useColorModeValue("gray.200", "gray.600");
+  const iconButtonColor = useColorModeValue("blue.600", "blue.200");
+  const selectFocusBorderColor = useColorModeValue("blue.600", "blue.300");
+  const inputBg = useColorModeValue("white", "gray.700");
+  const inputFocusBorderColor = useColorModeValue("blue.600", "blue.300");
+  const listItemHoverBg = useColorModeValue("gray.100", "gray.600");
 
-  const { auth } = useAuth();
+  const authData = useAuth();
+  const auth = authData?.auth;
   const [jugador, setJugador] = useState(null);
   const [nombreBuscado, setNombreBuscado] = useState("");
   const [sugerencias, setSugerencias] = useState([]);
@@ -123,7 +127,7 @@ const Dashboard = () => {
     };
   }, []);
 
-  if (!auth) return <Spinner />;
+  if (auth === undefined) return <Spinner />;
 
   const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth.suscripcion);
 
@@ -190,7 +194,7 @@ const Dashboard = () => {
         return `${abbreviation}:${numericValue}`;
       })
       .join("/");
-
+  
     if (!statsText) {
       toast({
         title: "No hay estadísticas seleccionadas",
@@ -201,7 +205,7 @@ const Dashboard = () => {
       });
       return;
     }
-
+  
     navigator.clipboard.writeText(statsText)
       .then(() => {
         toast({
@@ -224,21 +228,8 @@ const Dashboard = () => {
   };
 
   return (
-    // Fondo principal con el gradiente azul/violeta
-    <Box
-  minH="100vh"
-  bg="#DCE2E8"  // O el color exacto que quieras usar
-  p={4}
->
-      {/* Tarjeta contenedora con fondo claro/oscuro */}
-      <Box
-        maxW="1200px"
-        mx="auto"
-        p={6}
-        bg={cardBg}
-        rounded="lg"
-        boxShadow="xl"
-      >
+    <Box minH="100vh" bg="#DCE2E8" p={4}>
+      <Box maxW="1200px" mx="auto" p={6} bg={cardBg} rounded="lg" boxShadow="xl">
         <Flex alignItems="center" justifyContent="space-between" mb={4}>
           <Heading size="lg">🔍 Estadísticas</Heading>
           <IconButton
@@ -246,7 +237,7 @@ const Dashboard = () => {
             icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
             onClick={toggleColorMode}
             variant="ghost"
-            color={useColorModeValue("blue.600", "blue.200")}
+            color={iconButtonColor}
           />
         </Flex>
 
@@ -255,7 +246,7 @@ const Dashboard = () => {
             value={salaSeleccionada}
             onChange={(e) => setSalaSeleccionada(e.target.value)}
             maxW="200px"
-            focusBorderColor={useColorModeValue("blue.600", "blue.300")}
+            focusBorderColor={selectFocusBorderColor}
           >
             <option value="XPK">X-Poker</option>
             <option value="PPP">PPPoker</option>
@@ -271,8 +262,8 @@ const Dashboard = () => {
               value={nombreBuscado}
               onChange={handleInputChange}
               onFocus={() => setMostrarSugerencias(true)}
-              bg={useColorModeValue("white", "gray.700")}
-              focusBorderColor={useColorModeValue("blue.600", "blue.300")}
+              bg={inputBg}
+              focusBorderColor={inputFocusBorderColor}
             />
             {mostrarSugerencias && sugerencias.length > 0 && (
               <List
@@ -293,7 +284,7 @@ const Dashboard = () => {
                     key={index}
                     p={2}
                     cursor="pointer"
-                    _hover={{ background: useColorModeValue("gray.100", "gray.600") }}
+                    _hover={{ background: listItemHoverBg }}
                     onClick={() => {
                       setNombreBuscado(jug.player_name);
                       buscarJugador(jug.player_name);
@@ -306,8 +297,6 @@ const Dashboard = () => {
               </List>
             )}
           </Box>
-
-          {/* Botón "Buscar" con gradiente */}
           <Button
             size="lg"
             color="white"
@@ -321,14 +310,11 @@ const Dashboard = () => {
         </Flex>
 
         {loading && <Spinner size="xl" color="blue.500" />}
-        {!loading && !jugador && (
-          <Text>No se encontraron datos del jugador.</Text>
-        )}
+        {!loading && !jugador && <Text>No se encontraron datos del jugador.</Text>}
 
         {jugador && (
           <>
             <Flex gap={2} mb={4}>
-              {/* Botón "Copiar Estadísticas" con gradiente */}
               <Button
                 color="white"
                 bgGradient="linear(to-r, #5D5FEF, #6A76FB)"
@@ -354,7 +340,6 @@ const Dashboard = () => {
                   {jugador.player_name}
                 </Badge>
 
-                {/* Grid con menos gap para que estén casi tocándose */}
                 <Grid
                   templateColumns="repeat(auto-fit, minmax(120px, 1fr))"
                   gap={2}
@@ -366,63 +351,49 @@ const Dashboard = () => {
                     icon={FaHandPaper}
                     title="Manos Jugadas"
                     value={jugador.total_manos}
-                    onClick={() =>
-                      toggleStatSelection("Manos Jugadas", jugador.total_manos)
-                    }
+                    onClick={() => toggleStatSelection("Manos Jugadas", jugador.total_manos)}
                     isSelected={selectedStats["Manos Jugadas"] !== undefined}
                   />
                   <StatBox
                     icon={FaDollarSign}
                     title="Ganancias USD"
                     value={`$${jugador.win_usd}`}
-                    onClick={() =>
-                      toggleStatSelection("Ganancias USD", `$${jugador.win_usd}`)
-                    }
+                    onClick={() => toggleStatSelection("Ganancias USD", `$${jugador.win_usd}`)}
                     isSelected={selectedStats["Ganancias USD"] !== undefined}
                   />
                   <StatBox
                     icon={FaChartLine}
                     title="WINRATE"
                     value={`${jugador.bb_100} BB/100`}
-                    onClick={() =>
-                      toggleStatSelection("WINRATE", `${jugador.bb_100} BB/100`)
-                    }
+                    onClick={() => toggleStatSelection("WINRATE", `${jugador.bb_100} BB/100`)}
                     isSelected={selectedStats["WINRATE"] !== undefined}
                   />
                   <StatBox
                     icon={FaChartPie}
                     title="VPIP"
                     value={`${jugador.vpip}%`}
-                    onClick={() =>
-                      toggleStatSelection("VPIP", `${jugador.vpip}%`)
-                    }
+                    onClick={() => toggleStatSelection("VPIP", `${jugador.vpip}%`)}
                     isSelected={selectedStats["VPIP"] !== undefined}
                   />
                   <StatBox
                     icon={FaArrowUp}
                     title="PFR"
                     value={`${jugador.pfr}%`}
-                    onClick={() =>
-                      toggleStatSelection("PFR", `${jugador.pfr}%`)
-                    }
+                    onClick={() => toggleStatSelection("PFR", `${jugador.pfr}%`)}
                     isSelected={selectedStats["PFR"] !== undefined}
                   />
                   <StatBox
                     icon={FaSyncAlt}
                     title="3 BET"
                     value={`${jugador.three_bet}%`}
-                    onClick={() =>
-                      toggleStatSelection("3 BET", `${jugador.three_bet}%`)
-                    }
+                    onClick={() => toggleStatSelection("3 BET", `${jugador.three_bet}%`)}
                     isSelected={selectedStats["3 BET"] !== undefined}
                   />
                   <StatBox
                     icon={FaArrowDown}
                     title="Fold to 3-BET"
                     value={`${jugador.fold_to_3bet_pct}%`}
-                    onClick={() =>
-                      toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)
-                    }
+                    onClick={() => toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)}
                     isSelected={selectedStats["Fold to 3-BET"] !== undefined}
                   />
 
@@ -432,153 +403,119 @@ const Dashboard = () => {
                         icon={FaArrowUp}
                         title="4Bet Preflop"
                         value={`${jugador.four_bet_preflop_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("4 Bet Preflop", `${jugador.four_bet_preflop_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("4 Bet Preflop", `${jugador.four_bet_preflop_pct}%`)}
                         isSelected={selectedStats["4 Bet Preflop"] !== undefined}
                       />
                       <StatBox
                         icon={FaArrowDown}
                         title="Fold to 4Bet"
                         value={`${jugador.fold_to_4bet_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Fold to 4-Bet", `${jugador.fold_to_4bet_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Fold to 4-Bet", `${jugador.fold_to_4bet_pct}%`)}
                         isSelected={selectedStats["Fold to 4-Bet"] !== undefined}
                       />
                       <StatBox
                         icon={FaChartPie}
                         title="CBet Flop"
                         value={`${jugador.cbet_flop}%`}
-                        onClick={() =>
-                          toggleStatSelection("CBet Flop", `${jugador.cbet_flop}%`)
-                        }
+                        onClick={() => toggleStatSelection("CBet Flop", `${jugador.cbet_flop}%`)}
                         isSelected={selectedStats["CBet Flop"] !== undefined}
                       />
                       <StatBox
                         icon={FaChartPie}
                         title="CBet Turn"
                         value={`${jugador.cbet_turn}%`}
-                        onClick={() =>
-                          toggleStatSelection("CBet Turn", `${jugador.cbet_turn}%`)
-                        }
+                        onClick={() => toggleStatSelection("CBet Turn", `${jugador.cbet_turn}%`)}
                         isSelected={selectedStats["CBet Turn"] !== undefined}
                       />
                       <StatBox
                         icon={FaPercentage}
                         title="WWSF"
                         value={`${jugador.wwsf}%`}
-                        onClick={() =>
-                          toggleStatSelection("WWSF", `${jugador.wwsf}%`)
-                        }
+                        onClick={() => toggleStatSelection("WWSF", `${jugador.wwsf}%`)}
                         isSelected={selectedStats["WWSF"] !== undefined}
                       />
                       <StatBox
                         icon={FaPercentage}
                         title="WTSD"
                         value={`${jugador.wtsd}%`}
-                        onClick={() =>
-                          toggleStatSelection("WTSD", `${jugador.wtsd}%`)
-                        }
+                        onClick={() => toggleStatSelection("WTSD", `${jugador.wtsd}%`)}
                         isSelected={selectedStats["WTSD"] !== undefined}
                       />
                       <StatBox
                         icon={FaPercentage}
                         title="WSD"
                         value={`${jugador.wsd}%`}
-                        onClick={() =>
-                          toggleStatSelection("WSD", `${jugador.wsd}%`)
-                        }
+                        onClick={() => toggleStatSelection("WSD", `${jugador.wsd}%`)}
                         isSelected={selectedStats["WSD"] !== undefined}
                       />
                       <StatBox
                         icon={FaWalking}
                         title="Limp%"
                         value={`${jugador.limp_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Limp %", `${jugador.limp_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Limp %", `${jugador.limp_pct}%`)}
                         isSelected={selectedStats["Limp %"] !== undefined}
                       />
                       <StatBox
                         icon={FaHandPointUp}
                         title="LimpRaise %"
                         value={`${jugador.limp_raise_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Limp-Raise %", `${jugador.limp_raise_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Limp-Raise %", `${jugador.limp_raise_pct}%`)}
                         isSelected={selectedStats["Limp-Raise %"] !== undefined}
                       />
                       <StatBox
                         icon={FaArrowDown}
                         title="Fold to Flop CBet"
                         value={`${jugador.fold_to_flop_cbet_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Fold to Flop CBet", `${jugador.fold_to_flop_cbet_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Fold to Flop CBet", `${jugador.fold_to_flop_cbet_pct}%`)}
                         isSelected={selectedStats["Fold to Flop CBet"] !== undefined}
                       />
                       <StatBox
                         icon={FaArrowDown}
                         title="Fold to Turn CBet"
                         value={`${jugador.fold_to_turn_cbet_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Fold to Turn CBet", `${jugador.fold_to_turn_cbet_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Fold to Turn CBet", `${jugador.fold_to_turn_cbet_pct}%`)}
                         isSelected={selectedStats["Fold to Turn CBet"] !== undefined}
                       />
                       <StatBox
                         icon={FaChartPie}
                         title="Probe Bet Turn %"
                         value={`${jugador.probe_bet_turn_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Probe Bet Turn %", `${jugador.probe_bet_turn_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Probe Bet Turn %", `${jugador.probe_bet_turn_pct}%`)}
                         isSelected={selectedStats["Probe Bet Turn %"] !== undefined}
                       />
                       <StatBox
                         icon={FaWater}
                         title="Bet River %"
                         value={`${jugador.bet_river_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Bet River %", `${jugador.bet_river_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Bet River %", `${jugador.bet_river_pct}%`)}
                         isSelected={selectedStats["Bet River %"] !== undefined}
                       />
                       <StatBox
                         icon={FaArrowDown}
                         title="Fold to River Bet"
                         value={`${jugador.fold_to_river_bet_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Fold to River Bet", `${jugador.fold_to_river_bet_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Fold to River Bet", `${jugador.fold_to_river_bet_pct}%`)}
                         isSelected={selectedStats["Fold to River Bet"] !== undefined}
                       />
                       <StatBox
                         icon={FaExclamationTriangle}
                         title="Overbet Turn %"
                         value={`${jugador.overbet_turn_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Overbet Turn %", `${jugador.overbet_turn_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Overbet Turn %", `${jugador.overbet_turn_pct}%`)}
                         isSelected={selectedStats["Overbet Turn %"] !== undefined}
                       />
                       <StatBox
                         icon={FaExclamationTriangle}
                         title="Overbet River %"
                         value={`${jugador.overbet_river_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("Overbet River %", `${jugador.overbet_river_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("Overbet River %", `${jugador.overbet_river_pct}%`)}
                         isSelected={selectedStats["Overbet River %"] !== undefined}
                       />
                       <StatBox
                         icon={FaMedal}
                         title="WSDWBR %"
                         value={`${jugador.wsdwbr_pct}%`}
-                        onClick={() =>
-                          toggleStatSelection("WSDwBR %", `${jugador.wsdwbr_pct}%`)
-                        }
+                        onClick={() => toggleStatSelection("WSDwBR %", `${jugador.wsdwbr_pct}%`)}
                         isSelected={selectedStats["WSDwBR %"] !== undefined}
                       />
                     </>
@@ -602,10 +539,15 @@ const Dashboard = () => {
   );
 };
 
-// Ajustamos el StatBox con menos padding y el gap reducido para que estén más cerca
 const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
-  const excludedStats = ["Manos Jugadas", "Ganancias USD", "WINRATE"];
+  // Extraemos los valores de useColorModeValue incondicionalmente
+  const defaultBorderColor = useColorModeValue("gray.200", "gray.600");
+  const bgColor = useColorModeValue("white", "gray.700");
+  const iconDefaultColor = useColorModeValue("gray.500", "gray.200");
+  const textColor = useColorModeValue("gray.600", "gray.300");
 
+  const excludedStats = ["Manos Jugadas", "Ganancias USD", "WINRATE"];
+  
   let numericValue = value;
   if (!excludedStats.includes(title)) {
     let parsedValue = parseFloat(value);
@@ -620,9 +562,9 @@ const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
     <GridItem
       p={2}
       border="1px solid"
-      borderColor={isSelected ? "blue.400" : useColorModeValue("gray.200", "gray.600")}
+      borderColor={isSelected ? "blue.400" : defaultBorderColor}
       borderRadius="md"
-      bg={useColorModeValue("white", "gray.700")}
+      bg={bgColor}
       boxShadow={isSelected ? "0 0 0 2px rgba(66,153,225,0.6)" : "md"}
       textAlign="center"
       cursor={!excludedStats.includes(title) ? "pointer" : "default"}
@@ -643,11 +585,11 @@ const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
       minH="90px"
     >
       {Icon && (
-        <Box color={isSelected ? "blue.400" : useColorModeValue("gray.500", "gray.200")} mb={1}>
+        <Box color={isSelected ? "blue.400" : iconDefaultColor} mb={1}>
           <Icon size="20px" />
         </Box>
       )}
-      <Text fontWeight="bold" fontSize="xs" color={useColorModeValue("gray.600", "gray.300")}>
+      <Text fontWeight="bold" fontSize="xs" color={textColor}>
         {title.toUpperCase()}
       </Text>
       <Text fontSize="lg" fontWeight="semibold">
