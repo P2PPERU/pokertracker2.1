@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react'; 
+import React from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   Box,
   Heading,
@@ -45,7 +46,7 @@ import _ from 'lodash';
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
 
-  // Extraemos los valores de useColorModeValue de forma incondicional
+  // Valores de color
   const mainGradient = useColorModeValue(
     "linear(to-r, #5D5FEF, #6A76FB)", 
     "linear(to-r, #5D5FEF, #6A76FB)"
@@ -69,13 +70,14 @@ const Dashboard = () => {
   const sugerenciasRef = useRef(null);
   const [salaSeleccionada, setSalaSeleccionada] = useState("XPK");
 
-  // Estado para selección y copiado de estadísticas
+  // Estado para estadísticas y copiado
   const [selectedStats, setSelectedStats] = useState({});
   const { onCopy, setValue } = useClipboard("");
   const [statsText, setStatsText] = useState("");
   const toast = useToast();
 
-  const fetchSugerencias = async (query) => {
+  // Función para obtener sugerencias (se memoriza para usar en el debounce)
+  const fetchSugerencias = useCallback(async (query) => {
     if (query.length < 3) {
       setSugerencias([]);
       return;
@@ -87,20 +89,25 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error al obtener sugerencias:", error);
     }
-  };
+  }, [salaSeleccionada]);
 
-  const debouncedFetchSugerencias = _.debounce(fetchSugerencias, 300);
+  // Debounce de la función de sugerencias
+  const debouncedFetchSugerencias = useMemo(
+    () => _.debounce(fetchSugerencias, 300),
+    [fetchSugerencias]
+  );
 
-  const handleInputChange = (e) => {
+  // Manejo del input con useCallback
+  const handleInputChange = useCallback((e) => {
     setNombreBuscado(e.target.value);
     debouncedFetchSugerencias(e.target.value);
-  };
+  }, [debouncedFetchSugerencias]);
 
-  const buscarJugador = async (nombre) => {
+  // Función para buscar jugador (memoriza con useCallback)
+  const buscarJugador = useCallback(async (nombre) => {
     setLoading(true);
     setSugerencias([]);
     setSelectedStats({});
-
     try {
       const res = await api.get(`/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}`);
       setJugador(res.data);
@@ -109,12 +116,14 @@ const Dashboard = () => {
       setJugador(null);
     }
     setLoading(false);
-  };
+  }, [salaSeleccionada]);
 
+  // Buscar jugador predeterminado al montar
   useEffect(() => {
     buscarJugador("laligamanager");
-  }, []);
+  }, [buscarJugador]);
 
+  // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sugerenciasRef.current && !sugerenciasRef.current.contains(event.target)) {
@@ -127,24 +136,32 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Cancelar el debounce al desmontar
+  useEffect(() => {
+    return () => {
+      debouncedFetchSugerencias.cancel();
+    };
+  }, [debouncedFetchSugerencias]);
+
   if (auth === undefined) return <Spinner />;
 
   const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth.suscripcion);
 
-  const toggleStatSelection = (title, value) => {
+  // Memoriza la función de toggle para estadísticas
+  const toggleStatSelection = useCallback((title, value) => {
     setSelectedStats((prev) => ({
       ...prev,
       [title]: prev[title] ? undefined : value,
     }));
-  };
+  }, []);
 
+  // Actualizar el texto de estadísticas cuando cambian las estadísticas seleccionadas
   useEffect(() => {
-    const statsText = Object.entries(selectedStats)
+    const computedStatsText = Object.entries(selectedStats)
       .filter(([_, value]) => value !== undefined)
       .map(([title, value]) => `${title}: ${value}`)
       .join("\n");
-
-    setStatsText(statsText);
+    setStatsText(computedStatsText);
   }, [selectedStats]);
 
   const statAbbreviations = {
@@ -539,8 +556,8 @@ const Dashboard = () => {
   );
 };
 
-const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
-  // Extraemos los valores de useColorModeValue incondicionalmente
+// Componente StatBox memorizado para evitar renders innecesarios
+const StatBox = React.memo(({ icon: Icon, title, value, isSelected, onClick }) => {
   const defaultBorderColor = useColorModeValue("gray.200", "gray.600");
   const bgColor = useColorModeValue("white", "gray.700");
   const iconDefaultColor = useColorModeValue("gray.500", "gray.200");
@@ -572,10 +589,7 @@ const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
       transition="all 0.2s"
       _hover={
         !excludedStats.includes(title)
-          ? {
-              transform: "translateY(-2px)",
-              boxShadow: "lg",
-            }
+          ? { transform: "translateY(-2px)", boxShadow: "lg" }
           : {}
       }
       display="flex"
@@ -597,6 +611,6 @@ const StatBox = ({ icon: Icon, title, value, isSelected, onClick }) => {
       </Text>
     </GridItem>
   );
-};
+});
 
 export default Dashboard;
