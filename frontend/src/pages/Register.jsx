@@ -9,12 +9,13 @@ const Register = () => {
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [telefono, setTelefono] = useState('') // ✅ nuevo campo
   const navigate = useNavigate()
   const toast = useToast()
 
   const handleRegister = async () => {
     try {
-      await api.post('/auth/registro', { nombre, email, password })
+      await api.post('/auth/registro', { nombre, email, password, telefono }) // ✅ incluye teléfono
       toast({
         title: "Registro exitoso 🎉",
         status: "success",
@@ -25,7 +26,7 @@ const Register = () => {
     } catch (error) {
       toast({
         title: "Error en registro",
-        description: error.response?.data?.message || "Revisa los datos e inténtalo nuevamente.",
+        description: error.response?.data?.error || "Revisa los datos e inténtalo nuevamente.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -62,6 +63,16 @@ const Register = () => {
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
+          />
+        </FormControl>
+
+        <FormControl mb={4}>
+          <FormLabel>Teléfono</FormLabel>
+          <Input
+            type="tel"
+            value={telefono}
+            onChange={e => setTelefono(e.target.value)}
+            placeholder="Ej: +51 987654321"
           />
         </FormControl>
 

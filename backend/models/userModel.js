@@ -2,17 +2,15 @@ const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 
 // 📌 Registrar usuario con suscripción inicial "bronce"
-const registrarUsuario = async (nombre, email, password) => {
+const registrarUsuario = async (nombre, email, password, telefono) => {
     try {
-        const hashedPassword = await bcrypt.hash(password, 10); // 🔒 Encriptar contraseña
-        
+        const hashedPassword = await bcrypt.hash(password, 10);
         const query = `
-            INSERT INTO usuarios (nombre, email, password, suscripcion)
-            VALUES ($1, $2, $3, 'bronce') 
-            RETURNING id, nombre, email, suscripcion, fecha_creacion;
+            INSERT INTO usuarios (nombre, email, password, telefono, suscripcion)
+            VALUES ($1, $2, $3, $4, 'bronce') 
+            RETURNING id, nombre, email, suscripcion, telefono, fecha_creacion;
         `;
-
-        const { rows } = await db.query(query, [nombre, email, hashedPassword]);
+        const { rows } = await db.query(query, [nombre, email, hashedPassword, telefono]);
         return rows[0];
     } catch (error) {
         console.error("❌ Error en el registro:", error);
@@ -30,6 +28,11 @@ const obtenerUsuarioPorEmail = async (email) => {
         console.error("❌ Error al buscar usuario:", error);
         throw new Error("Error al buscar usuario");
     }
+};
+
+// ✅ Esta función marca el email como verificado
+const verificarEmail = async (idUsuario) => {
+    await db.query("UPDATE usuarios SET verificado = true WHERE id = $1", [idUsuario]);
 };
 
 // 📌 Actualizar suscripción de un usuario
@@ -60,4 +63,4 @@ const actualizarSuscripcion = async (idUsuario, nuevaSuscripcion) => {
     }
 };
 
-module.exports = { registrarUsuario, obtenerUsuarioPorEmail, actualizarSuscripcion };
+module.exports = { registrarUsuario, obtenerUsuarioPorEmail, actualizarSuscripcion, verificarEmail };

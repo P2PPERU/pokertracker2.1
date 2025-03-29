@@ -3,8 +3,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 const { verificarToken, verificarRol, verificarAdmin } = require("../middleware/authMiddleware");
+const { verificarCuenta } = require("../controllers/userController");
+const { recuperarPassword } = require("../controllers/userController");
+const { resetearPassword } = require("../controllers/userController");
 
 const router = express.Router();
+
+router.post("/recuperar-password", recuperarPassword);
+
+router.post("/resetear-password", resetearPassword);
 
 // 📌 Ruta para que el ADMIN modifique la suscripción de cualquier usuario
 router.post("/admin/cambiar-suscripcion", verificarToken, verificarAdmin, async (req, res) => {
@@ -57,6 +64,9 @@ router.post("/registro", async (req, res) => {
         res.status(500).json({ error: "Error al registrar usuario" });
     }
 });
+
+// 📌 Verificación de correo tras registro
+router.get("/verificar", verificarCuenta);
 
 // 📌 Inicio de sesión (Asegurar que el token incluya el rol)
 router.post("/login", async (req, res) => {

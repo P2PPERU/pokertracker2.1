@@ -1,10 +1,14 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { registrarUsuario, obtenerUsuarioPorEmail,actualizarSuscripcion } = require("../models/userModel");
+const { enviarCorreoVerificacion } = require("../utils/email");
+const { verificarEmail } = require("../models/userModel");
+const { enviarCorreoRecuperacion } = require("../utils/email");
+
 
 // 📌 Registro de usuario
 const registro = async (req, res) => {
-    const { nombre, email, password } = req.body;
+    const { nombre, email, password, telefono } = req.body;
 
     try {
         const usuarioExistente = await obtenerUsuarioPorEmail(email);
@@ -12,11 +16,50 @@ const registro = async (req, res) => {
             return res.status(400).json({ error: "El email ya está registrado." });
         }
 
-        const nuevoUsuario = await registrarUsuario(nombre, email, password);
-        res.json({ mensaje: "Usuario registrado con éxito", usuario: nuevoUsuario });
+        const nuevoUsuario = await registrarUsuario(nombre, email, password, telefono);
+
+        const token = jwt.sign(
+            { id: nuevoUsuario.id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        await enviarCorreoVerificacion(email, token);
+
+        res.json({ mensaje: "Usuario registrado. Verifica tu correo para activar la cuenta." });
     } catch (error) {
         console.error("Error en el registro:", error);
         res.status(500).json({ error: "Error al registrar usuario" });
+    }
+};
+
+const resetearPassword = async (req, res) => {
+    const { token, nuevaPassword } = req.body;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(nuevaPassword, salt);
+
+        await pool.query("UPDATE usuarios SET password = $1 WHERE id = $2", [hashedPassword, decoded.id]);
+
+        res.json({ mensaje: "✅ Contraseña actualizada con éxito. Ya puedes iniciar sesión." });
+    } catch (error) {
+        console.error("Error en resetearPassword:", error);
+        res.status(400).json({ error: "❌ Enlace inválido o expirado." });
+    }
+};
+
+
+const verificarCuenta = async (req, res) => {
+    const { token } = req.query;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        await verificarEmail(decoded.id);
+        res.send("✅ ¡Correo verificado! Ya puedes iniciar sesión.");
+    } catch (err) {
+        res.status(400).send("❌ Enlace inválido o expirado.");
     }
 };
 
@@ -61,5 +104,29 @@ const actualizarSuscripcionController = async (req, res) => {
     }
 };
 
+const recuperarPassword = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const usuario = await obtenerUsuarioPorEmail(email);
+        if (!usuario) {
+            return res.status(404).json({ error: "No existe cuenta con ese correo" });
+        }
+
+        const token = jwt.sign(
+            { id: usuario.id },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" } // Token expira en 15 minutos
+        );
+
+        await enviarCorreoRecuperacion(email, token);
+
+        res.json({ mensaje: "Te enviamos un correo para restablecer tu contraseña." });
+    } catch (error) {
+        console.error("Error en recuperarPassword:", error);
+        res.status(500).json({ error: "Error al enviar enlace de recuperación" });
+    }
+};
+
 // Exportar controladores
-module.exports = { registro, login, actualizarSuscripcion: actualizarSuscripcionController };
+module.exports = { registro, login, actualizarSuscripcion: actualizarSuscripcionController, verificarCuenta, recuperarPassword, resetearPassword };

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
   Box,
   Input,
@@ -9,7 +9,9 @@ import {
   FormLabel,
   Heading,
   useToast,
-  Container
+  Container,
+  Text,
+  Link
 } from '@chakra-ui/react'
 
 const Login = () => {
@@ -63,9 +65,16 @@ const Login = () => {
           />
         </FormControl>
 
-        <Button colorScheme="teal" width="100%" onClick={handleLogin}>
+        <Button colorScheme="teal" width="100%" onClick={handleLogin} mb={4}>
           Entrar
         </Button>
+
+        {/* Enlace de recuperación de contraseña */}
+        <Text textAlign="center">
+          <Link as={RouterLink} to="/recuperar" color="teal.500">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </Text>
       </Box>
     </Container>
   )

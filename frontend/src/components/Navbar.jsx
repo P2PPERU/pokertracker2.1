@@ -3,13 +3,15 @@ import {
   Button,
   Text,
   Link,
-  useColorModeValue,
+  useDisclosure
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AuthModal from "./AuthModal";
 
 const Navbar = () => {
   const { auth, logout } = useAuth();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const navItemColor = "white";
   const hoverColor = "cyan.200";
@@ -27,7 +29,7 @@ const Navbar = () => {
       top="0"
       zIndex="1000"
     >
-      {/* Marca */}
+      {/* Logo / Título */}
       <Text fontSize="2xl" fontWeight="bold">
         <Link
           as={RouterLink}
@@ -40,6 +42,7 @@ const Navbar = () => {
 
       {/* Navegación */}
       <Flex gap={4} wrap="wrap">
+        {/* Siempre visibles */}
         <Link as={RouterLink} to="/" _hover={{ textDecoration: "none" }}>
           <Button
             variant="ghost"
@@ -52,50 +55,97 @@ const Navbar = () => {
           </Button>
         </Link>
 
+        {auth && (
+          <Link as={RouterLink} to="/dashboard">
+            <Button
+              variant="ghost"
+              fontSize="lg"
+              fontWeight="medium"
+              color={navItemColor}
+              _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+            >
+              Generador EV
+            </Button>
+          </Link>
+        )}
+
+        <Link as={RouterLink} to="/top-jugadores">
+          <Button
+            variant="ghost"
+            fontSize="lg"
+            fontWeight="medium"
+            color={navItemColor}
+            _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+          >
+            Top Jugadores
+          </Button>
+        </Link>
+
+        <Link as={RouterLink} to="/suscripciones">
+          <Button
+            variant="ghost"
+            fontSize="lg"
+            fontWeight="medium"
+            color={navItemColor}
+            _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+          >
+            Suscripciones
+          </Button>
+        </Link>
+
+        {/* Perfil, Admin & Logout */}
         {auth ? (
           <>
-            <Link as={RouterLink} to="/dashboard">
-              <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
-                Generador EV
-              </Button>
-            </Link>
-
-            <Link as={RouterLink} to="/top-jugadores">
-              <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
-                Top Jugadores
-              </Button>
-            </Link>
-
-            <Link as={RouterLink} to="/suscripciones">
-              <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
-                Suscripciones
+            <Link as={RouterLink} to="/perfil">
+              <Button
+                variant="ghost"
+                fontSize="lg"
+                fontWeight="medium"
+                color={navItemColor}
+                _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+              >
+                Mi Perfil
               </Button>
             </Link>
 
             {auth.rol === "admin" && (
               <Link as={RouterLink} to="/admin">
-                <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
+                <Button
+                  variant="ghost"
+                  fontSize="lg"
+                  fontWeight="medium"
+                  color={navItemColor}
+                  _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+                >
                   Admin Panel
                 </Button>
               </Link>
             )}
 
-            <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: "red.300", bg: "whiteAlpha.200" }} onClick={logout}>
+            <Button
+              variant="ghost"
+              fontSize="lg"
+              fontWeight="medium"
+              color={navItemColor}
+              _hover={{ color: "red.300", bg: "whiteAlpha.200" }}
+              onClick={logout}
+            >
               Salir
             </Button>
           </>
         ) : (
           <>
-            <Link as={RouterLink} to="/login">
-              <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
-                Ingresar
-              </Button>
-            </Link>
-            <Link as={RouterLink} to="/register">
-              <Button variant="ghost" fontSize="lg" fontWeight="medium" color={navItemColor} _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}>
-                Registrar
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              fontSize="lg"
+              fontWeight="medium"
+              color={navItemColor}
+              _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+              onClick={onOpen}
+            >
+              Ingresar
+            </Button>
+            <AuthModal isOpen={isOpen} onClose={onClose} />
           </>
         )}
       </Flex>
