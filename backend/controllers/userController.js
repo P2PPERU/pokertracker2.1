@@ -1,3 +1,4 @@
+const pool = require('../config/db'); // ✅ Agregá esta línea
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { registrarUsuario, obtenerUsuarioPorEmail,actualizarSuscripcion } = require("../models/userModel");

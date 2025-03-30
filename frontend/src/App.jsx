@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './routes/PrivateRoute';
@@ -12,9 +13,22 @@ import Register from './pages/Register';
 import AdminPanel from './pages/AdminPanel';
 import RecuperarPassword from './pages/RecuperarPassword';
 import ResetearPassword from './pages/ResetearPassword';
-import Perfil from './pages/Perfil'; // ⬆️ NUEVO
+import Perfil from './pages/Perfil';
+
+import AuthModal from './components/AuthModal';
 
 function App() {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const cerrarModalLogin = () => setIsLoginModalOpen(false);
+
+  useEffect(() => {
+    const handleAbrir = () => setIsLoginModalOpen(true);
+    window.addEventListener("abrir-modal-login", handleAbrir);
+
+    return () => window.removeEventListener("abrir-modal-login", handleAbrir);
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
@@ -31,7 +45,7 @@ function App() {
           {/* 🔒 Usuarios registrados con cualquier suscripción */}
           <Route element={<PrivateRoute suscripciones={["bronce", "plata", "oro"]} />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/perfil" element={<Perfil />} /> {/* ⬆️ NUEVO */}
+            <Route path="/perfil" element={<Perfil />} />
           </Route>
 
           {/* 🔒 Solo accesible para rol "admin" */}
@@ -39,6 +53,9 @@ function App() {
             <Route path="/admin" element={<AdminPanel />} />
           </Route>
         </Routes>
+
+        {/* ✅ Modal flotante controlado por evento global */}
+        <AuthModal isOpen={isLoginModalOpen} onClose={cerrarModalLogin} />
       </Router>
     </AuthProvider>
   );
