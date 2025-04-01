@@ -104,14 +104,21 @@ router.post("/login", async (req, res) => {
 });
 
 // 📌 Obtener perfil del usuario autenticado
+// Código corregido
 router.get("/perfil", verificarToken, async (req, res) => {
     try {
-        const usuario = await pool.query("SELECT id, nombre, email, suscripcion FROM usuarios WHERE id = $1", [req.usuario.id]);
-        res.json({ mensaje: "Perfil de usuario", usuario: usuario.rows[0] });
+      const usuario = await pool.query(`
+        SELECT id, nombre, email, suscripcion, suscripcion_expira 
+        FROM usuarios 
+        WHERE id = $1
+      `, [req.usuario.id]);
+  
+      res.json({ mensaje: "Perfil de usuario", usuario: usuario.rows[0] });
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener el perfil" });
+      res.status(500).json({ error: "Error al obtener el perfil" });
     }
-});
+  });
+  
 
 // 📌 Cambio de suscripción
 router.post("/cambiar-suscripcion", verificarToken, async (req, res) => {

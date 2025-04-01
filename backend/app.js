@@ -2,17 +2,21 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression"); // ✅ Nuevo
+
 const jugadorRoutes = require("./routes/jugadorRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const favoritesRoutes = require("./routes/favoritesRoutes"); // <-- Importar favoritesRoutes
 
 const app = express();
 
-// Middleware
+// ✅ Middleware global
 app.use(cors());
 app.use(express.json());
+app.use(compression()); // ✅ Comprime todas las respuestas HTTP
 
-// 📌 Agregar rutas de autenticación
+// 📌 Rutas de autenticación
 app.use("/api/auth", userRoutes);
 
 // ✅ Ruta de bienvenida
@@ -20,16 +24,13 @@ app.get("/", (req, res) => {
   res.send("🚀 Bienvenido a la API de PokerTracker 2.0");
 });
 
-// Rutas
+// 📌 Otras rutas
 app.use("/api", jugadorRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/favoritos", favoritesRoutes); // <-- Montar la ruta de favoritos
 
-// Puerto del servidor
+// 🚀 Puerto del servidor
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en el puerto ${PORT}`);
 });
-// Compare this snippet from backend/app.js:
-// const express = require("express");
-// Test para activar deploygit add backend/app.js
