@@ -3,7 +3,6 @@ import {
   Heading,
   Text,
   SimpleGrid,
-  Stack,
   Button,
   Badge,
   useColorModeValue,
@@ -33,6 +32,16 @@ const AdminPanel = () => {
   const [busqueda, setBusqueda] = useState("");
   const toast = useToast();
 
+  // Colores según modo claro/oscuro
+  const pageBg = useColorModeValue("gray.100", "gray.900");
+  const cardBg = useColorModeValue("white", "gray.800");
+  const headingColor = useColorModeValue("teal.500", "teal.300");
+  const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
+  const inputBg = useColorModeValue("white", "gray.700");
+  const oroBg = useColorModeValue("yellow.50", "yellow.900");
+  const plataBg = useColorModeValue("blue.50", "blue.900");
+  const defaultRowBg = useColorModeValue("white", "gray.700");
+
   const fetchUsuarios = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -42,13 +51,21 @@ const AdminPanel = () => {
 
       const usuariosActualizados = await Promise.all(
         data.map(async (u) => {
-          if ((u.suscripcion === "oro" || u.suscripcion === "plata") && u.suscripcion_expira && new Date(u.suscripcion_expira) < new Date()) {
-            await api.put(`/admin/usuarios/${u.id}/suscripcion`, { nuevaSuscripcion: "bronce" }, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            await api.put(`/admin/usuarios/${u.id}/expiracion`, { nuevaFecha: null }, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+          if (
+            (u.suscripcion === "oro" || u.suscripcion === "plata") &&
+            u.suscripcion_expira &&
+            new Date(u.suscripcion_expira) < new Date()
+          ) {
+            await api.put(
+              `/admin/usuarios/${u.id}/suscripcion`,
+              { nuevaSuscripcion: "bronce" },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            await api.put(
+              `/admin/usuarios/${u.id}/expiracion`,
+              { nuevaFecha: null },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
             return { ...u, suscripcion: "bronce", suscripcion_expira: null };
           }
           return u;
@@ -67,14 +84,19 @@ const AdminPanel = () => {
     const cambios = edicionesPendientes[id];
     if (!cambios) return;
 
-    const confirmacion = window.confirm(`¿Estás seguro de actualizar al jugador con ID ${id} a:\n- Suscripción: ${cambios.suscripcion}\n- Expira: ${cambios.expiracion || "sin cambios"}`);
+    const confirmacion = window.confirm(
+      `¿Estás seguro de actualizar al jugador con ID ${id} a:\n- Suscripción: ${cambios.suscripcion}\n- Expira: ${cambios.expiracion || "sin cambios"}`
+    );
     if (!confirmacion) return;
 
     try {
       const token = localStorage.getItem("token");
 
       let nuevaFecha = cambios.expiracion;
-      if ((cambios.suscripcion === "oro" || cambios.suscripcion === "plata") && !cambios.expiracion) {
+      if (
+        (cambios.suscripcion === "oro" || cambios.suscripcion === "plata") &&
+        !cambios.expiracion
+      ) {
         const hoy = new Date();
         hoy.setDate(hoy.getDate() + 30);
         nuevaFecha = hoy.toISOString().split("T")[0];
@@ -104,12 +126,19 @@ const AdminPanel = () => {
       });
     } catch (err) {
       console.error("Error actualizando campo:", err);
-      toast({ title: "Error", description: "❌ Error al actualizar", status: "error", duration: 3000 });
+      toast({
+        title: "Error",
+        description: "❌ Error al actualizar",
+        status: "error",
+        duration: 3000,
+      });
     }
   };
 
   const eliminarUsuario = async (id) => {
-    const confirmar = window.confirm(`¿Estás seguro de eliminar al usuario con ID ${id}? Esta acción no se puede deshacer.`);
+    const confirmar = window.confirm(
+      `¿Estás seguro de eliminar al usuario con ID ${id}? Esta acción no se puede deshacer.`
+    );
     if (!confirmar) return;
 
     try {
@@ -121,7 +150,12 @@ const AdminPanel = () => {
       fetchUsuarios();
     } catch (error) {
       console.error("Error eliminando usuario:", error);
-      toast({ title: "Error", description: "❌ No se pudo eliminar el usuario", status: "error", duration: 3000 });
+      toast({
+        title: "Error",
+        description: "❌ No se pudo eliminar el usuario",
+        status: "error",
+        duration: 3000,
+      });
     }
   };
 
@@ -140,7 +174,10 @@ const AdminPanel = () => {
     u.email.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  const totalIA = usuarios.reduce((acc, u) => acc + parseInt(u.solicitudes_ia_mes || 0, 10), 0);
+  const totalIA = usuarios.reduce(
+    (acc, u) => acc + parseInt(u.solicitudes_ia_mes || 0, 10),
+    0
+  );
   const totalUsuarios = usuarios.length;
   const totalOro = usuarios.filter((u) => u.suscripcion === "oro").length;
   const totalPlata = usuarios.filter((u) => u.suscripcion === "plata").length;
@@ -149,17 +186,25 @@ const AdminPanel = () => {
     fetchUsuarios();
   }, []);
 
+  // Componente para mostrar estadísticas individuales
+  const StatBox = ({ label, number }) => (
+    <Stat>
+      <StatLabel>{label}</StatLabel>
+      <StatNumber>{number}</StatNumber>
+    </Stat>
+  );
+
   return (
-    <Box p={6} maxW="1200px" mx="auto">
-      <Heading size="lg" mb={6} color="teal.500">
+    <Box p={6} maxW="1200px" mx="auto" bg={pageBg}>
+      <Heading size="lg" mb={6} color={headingColor}>
         👤 Panel Administrativo
       </Heading>
 
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4} mb={6}>
-        <Stat><StatLabel>Total usuarios</StatLabel><StatNumber>{totalUsuarios}</StatNumber></Stat>
-        <Stat><StatLabel>Oro</StatLabel><StatNumber>{totalOro}</StatNumber></Stat>
-        <Stat><StatLabel>Plata</StatLabel><StatNumber>{totalPlata}</StatNumber></Stat>
-        <Stat><StatLabel>Solicitudes IA este mes</StatLabel><StatNumber>{totalIA}</StatNumber></Stat>
+        <StatBox label="Total usuarios" number={totalUsuarios} />
+        <StatBox label="Oro" number={totalOro} />
+        <StatBox label="Plata" number={totalPlata} />
+        <StatBox label="Solicitudes IA este mes" number={totalIA} />
       </SimpleGrid>
 
       <Input
@@ -167,13 +212,14 @@ const AdminPanel = () => {
         mb={4}
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
+        bg={inputBg}
       />
 
       {mensaje && <Text color="green.500" mb={2}>{mensaje}</Text>}
       {loading ? (
         <Spinner size="lg" color="teal.500" />
       ) : (
-        <Table variant="simple" size="sm">
+        <Table variant="simple" size="sm" bg={cardBg}>
           <Thead>
             <Tr>
               <Th>ID</Th>
@@ -188,13 +234,24 @@ const AdminPanel = () => {
           </Thead>
           <Tbody>
             {usuariosFiltrados.map((user) => {
-              const suscripcionExpirada = (user.suscripcion === "oro" || user.suscripcion === "plata") && user.suscripcion_expira && new Date(user.suscripcion_expira) < new Date();
+              const suscripcionExpirada =
+                (user.suscripcion === "oro" || user.suscripcion === "plata") &&
+                user.suscripcion_expira &&
+                new Date(user.suscripcion_expira) < new Date();
+              const rowBg =
+                user.suscripcion === "oro"
+                  ? oroBg
+                  : user.suscripcion === "plata"
+                  ? plataBg
+                  : defaultRowBg;
               return (
-                <Tr key={user.id} bg={user.suscripcion === "oro" ? "yellow.50" : user.suscripcion === "plata" ? "blue.50" : "white"}>
+                <Tr key={user.id} bg={rowBg}>
                   <Td>{user.id}</Td>
-                  <Td>{user.nombre}</Td>
-                  <Td>{user.email}</Td>
-                  <Td><Badge colorScheme="purple">{user.rol}</Badge></Td>
+                  <Td color={textColor}>{user.nombre}</Td>
+                  <Td color={textColor}>{user.email}</Td>
+                  <Td>
+                    <Badge colorScheme="purple">{user.rol}</Badge>
+                  </Td>
                   <Td>
                     <Select
                       value={edicionesPendientes[user.id]?.suscripcion || user.suscripcion || ""}
@@ -207,15 +264,22 @@ const AdminPanel = () => {
                       <option value="oro">Oro</option>
                     </Select>
                     {suscripcionExpirada && (
-                      <Badge colorScheme="red" fontSize="xs" mt={1}>Suscripción expirada</Badge>
+                      <Badge colorScheme="red" fontSize="xs" mt={1}>
+                        Suscripción expirada
+                      </Badge>
                     )}
                   </Td>
                   <Td>
                     <Input
                       type="date"
-                      value={edicionesPendientes[user.id]?.expiracion || user.suscripcion_expira?.split("T")[0] || ""}
+                      value={
+                        edicionesPendientes[user.id]?.expiracion ||
+                        user.suscripcion_expira?.split("T")[0] ||
+                        ""
+                      }
                       onChange={(e) => manejarCambio(user.id, "expiracion", e.target.value)}
                       size="sm"
+                      bg={inputBg}
                     />
                   </Td>
                   <Td>{user.solicitudes_ia_mes}</Td>

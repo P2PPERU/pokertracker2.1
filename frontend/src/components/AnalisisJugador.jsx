@@ -92,7 +92,7 @@ const AnalisisJugador = ({ nombre, salaSeleccionada, suscripcionUsuario }) => {
 
           {fromCache && (
             <Text mt={2} fontSize="sm" color="gray.500">
-              (Este análisis fue generado anteriormente y no consumió una solicitud)
+              (Este análisis fue generado anteriormente)
             </Text>
           )}
 

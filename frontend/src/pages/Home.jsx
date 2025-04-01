@@ -11,10 +11,7 @@ import {
   SimpleGrid,
   Divider,
   Badge,
-  Grid,
-  GridItem,
 } from "@chakra-ui/react";
-import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaChartBar, FaRobot, FaStar } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -24,21 +21,34 @@ const Home = () => {
   const { login, logout, auth } = useAuth();
 
   const abrirModalLogin = () => {
-    const event = new CustomEvent('abrir-modal-login');
+    const event = new CustomEvent("abrir-modal-login");
     window.dispatchEvent(event);
   };
+
+  // Colores y estilos según modo claro/oscuro
   const bg = useColorModeValue("#f7f9fc", "#0a0f1a");
   const cardBg = useColorModeValue("white", "#202738");
-  const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
   const headingColor = useColorModeValue("gray.900", "teal.200");
   const subTextColor = useColorModeValue("gray.600", "gray.400");
-  const cardGradient = useColorModeValue("linear(to-r, #2BB5E0, #8266D4)", "gray.700");
-  const navigate = useNavigate();
+  const cardGradient = useColorModeValue(
+    "linear(to-r, #2BB5E0, #8266D4)",
+    "linear(to-r, #2BB5E0, #8266D4)"
+  );
+  const analysisBg = useColorModeValue("gray.50", "gray.800");
+  const analysisTextColor = useColorModeValue("gray.800", "whiteAlpha.900");
+  const imageFilter = useColorModeValue("none", "brightness(0.85)");
 
   return (
     <>
-      <Box height="2px" bg="teal.400" w="100%" boxShadow="0 0 10px #14f1c6" />
+      {/* Barra superior */}
+      <Box
+        height="3px"
+        bg="teal.400"
+        w="100%"
+        boxShadow="0 0 15px rgba(20, 241, 198, 0.7)"
+      />
 
+      {/* Sección principal */}
       <Box
         as="section"
         bg={bg}
@@ -61,16 +71,20 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Flex align="center" gap={3} mb={2}>
-              <Heading fontSize={["3xl", "4xl", "5xl"]} color={headingColor} lineHeight="short">
-                Bienvenido a {" "}
+            <Flex align="center" gap={3} mb={3}>
+              <Heading
+                fontSize={["3xl", "4xl", "5xl"]}
+                color={headingColor}
+                lineHeight="shorter"
+              >
+                Bienvenido a{" "}
                 <Text
                   as="span"
                   bgGradient="linear(to-r, teal.400, purple.500)"
                   bgClip="text"
                   fontWeight="extrabold"
                 >
-                  Luciana EV
+                  POKER PRO TRACK 2.1
                 </Text>
               </Heading>
               <Badge
@@ -86,28 +100,35 @@ const Home = () => {
               </Badge>
             </Flex>
 
-            <Text fontSize={["md", "lg", "xl"]} color={subTextColor} mb={6} maxW="500px">
-              Tu asistente profesional para el análisis explotativo de jugadores de cash.
-              Accede a estadísticas reales, informes de IA y toma decisiones precisas en tus sesiones.
+            <Text
+              fontSize={["md", "lg", "xl"]}
+              color={subTextColor}
+              mb={8}
+              maxW="500px"
+            >
+              Tu asistente profesional para el análisis explotativo de jugadores
+              de cash. Accede a estadísticas reales, informes de IA y toma
+              decisiones precisas en tus sesiones.
             </Text>
 
             <Button
-  onClick={abrirModalLogin}
-  size="lg"
-  px={10}
-  py={6}
-  fontSize="xl"
-  fontWeight="bold"
-  bgGradient="linear(to-r, teal.300, blue.400, purple.500)"
-  color="white"
-  _hover={{
-    bgGradient: "linear(to-r, teal.400, blue.500, purple.600)",
-    transform: "scale(1.05)",
-  }}
-  boxShadow="lg"
->
-  Generador de EV 🚀
-</Button>
+              onClick={abrirModalLogin}
+              size="lg"
+              px={10}
+              py={6}
+              fontSize="xl"
+              fontWeight="bold"
+              bgGradient="linear(to-r, teal.300, blue.400, purple.500)"
+              color="white"
+              _hover={{
+                bgGradient: "linear(to-r, teal.400, blue.500, purple.600)",
+                transform: "scale(1.05)",
+              }}
+              boxShadow="lg"
+              borderRadius="xl"
+            >
+              Generador de EV 🚀
+            </Button>
           </MotionBox>
 
           <MotionBox
@@ -118,71 +139,179 @@ const Home = () => {
             maxW="500px"
             bgGradient="linear(to-r, teal.300, blue.400, purple.500)"
           >
-            <Box borderRadius="lg" overflow="hidden" bg="white" p={0}>
+            <Box borderRadius="lg" overflow="hidden" bg="white">
               <Image
                 src="/images/hero-pokertracker.png"
                 alt="Poker futurista con estadísticas"
                 objectFit="cover"
                 w="100%"
+                filter={imageFilter}
               />
             </Box>
           </MotionBox>
         </Flex>
       </Box>
 
-      {/* NUEVA SECCIÓN DE CASO DE ÉXITO */}
-      <Box maxW="2000px" mx="auto" mt={20} p={10} bg={cardBg} rounded="2xl" boxShadow="2xl">
-        <Heading size="lg" mb={8} color={headingColor} display="flex" alignItems="center" gap={2}>
-          <Icon as={FaChartBar} /> ¿Qué puedes lograr con Luciana EV?
+      {/* Sección de caso de éxito */}
+      <Box
+        maxW="1200px"
+        mx="auto"
+        mt={20}
+        p={10}
+        bg={cardBg}
+        rounded="2xl"
+        boxShadow="2xl"
+      >
+        <Heading
+          size="lg"
+          mb={8}
+          color={headingColor}
+          textAlign="center"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={2}
+        >
+          <Icon as={FaChartBar} /> ¿Qué puedes lograr con POKER PRO TRACK?
         </Heading>
-        <Flex direction={{ base: "column", md: "row" }} gap={12} align="start">
-          <Box flex="1.5">
+
+        {/* Contenedor centrado de la sección */}
+        <Flex
+          direction="column"
+          gap={8}
+          align="center"
+          justify="center"
+          w="full"
+          maxW="700px"
+          mx="auto"
+        >
+          {/* Imagen del gráfico */}
+          <Box w="full" textAlign="center">
             <Image
               src="/images/graficoweb.png"
               alt="Gráfico de ganancias"
               rounded="lg"
               w="100%"
-              maxH="400px"
+              maxH="450px"
               objectFit="contain"
-              mt={6}
+              mt={4}
+              filter={imageFilter}
             />
           </Box>
-          <Box flex="2">
-            <Badge colorScheme="green" mb={2} fontSize="lg">JUGADOR: LALIGAMANAGER</Badge>
-            <Image src="/images/statweb.png" alt="Estadísticas del jugador" rounded="lg" mb={6} />
-            <Box bg="gray.50" p={4} rounded="md" fontSize="md">
-              <Text fontWeight="bold" mb={2}>🧠 Análisis IA:</Text>
-              <Text>
-                Estilo: TAG con tendencia a la pasividad preflop. Aumenta agresión postflop sin consistencia.
+
+          {/* Imagen de estadísticas y análisis */}
+          <Box w="full" textAlign="center">
+            <Image
+              src="/images/statweb.png"
+              alt="Estadísticas del jugador"
+              rounded="lg"
+              mb={6}
+              filter={imageFilter}
+              w="100%"
+            />
+            <Box
+              bg={analysisBg}
+              p={6}
+              rounded="md"
+              fontSize="md"
+              color={analysisTextColor}
+              boxShadow="sm"
+            >
+              <Text fontWeight="bold" mb={2}>
+                🧠 Análisis IA:
+              </Text>
+              <Text mb={1}>
+                <strong>Estilo:</strong> TAG con tendencia a la pasividad
+                preflop. Aumenta agresión postflop en spots seleccionados, pero
+                sin consistencia.
+              </Text>
+              <Text mb={1}>
+                <strong>Errores:</strong> VPIP alto, PFR bajo. Se frena en el
+                turn. WTSD bajo comparado con WSD, no maximiza sus manos
+                fuertes.
               </Text>
               <Text>
-                Errores: VPIP alto, PFR bajo. Se frena en el turn. WTSD no maximiza sus manos fuertes.
-              </Text>
-              <Text>
-                Explotación: Flotar más en flop, atacar en turn si hace check. Extraer valor en river.
+                <strong>Explotación:</strong> Flotar más en flop y atacar en
+                turn. Ajusta para extraer valor cuando te paga.
               </Text>
             </Box>
-            <Button mt={6} colorScheme="teal" size="lg" onClick={() => abrirModalLogin()}>🚀 Analiza a tus oponentes ahora</Button>
+
+            {/* Botón más pequeño y centrado */}
+            <Button
+              mt={6}
+              colorScheme="teal"
+              size="md"
+              onClick={abrirModalLogin}
+              borderRadius="xl"
+            >
+              🚀 Analiza a tus oponentes ahora
+            </Button>
           </Box>
         </Flex>
       </Box>
 
+      {/* Sección de servicios */}
       <Box as="main" bg={bg} py={[10, 16]} px={[4, 8]}>
-        <SimpleGrid columns={[1, 2, 3]} spacing={8} maxW="1200px" mx="auto" mb={12}>
-          <Box p={6} bgGradient={cardGradient} borderRadius="2xl" color="white" boxShadow="xl" textAlign="center">
+        <SimpleGrid
+          columns={[1, 2, 3]}
+          spacing={8}
+          maxW="1200px"
+          mx="auto"
+          mb={12}
+        >
+          <Box
+            p={6}
+            bgGradient={cardGradient}
+            borderRadius="2xl"
+            color="white"
+            boxShadow="xl"
+            textAlign="center"
+            _hover={{ transform: "scale(1.03)" }}
+            transition="all 0.3s"
+          >
             <Icon as={FaSearch} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>Búsqueda Inteligente</Heading>
-            <Text fontSize="lg">Encuentra jugadores por nombre o alias en segundos.</Text>
+            <Heading size="md" mb={2}>
+              Búsqueda Inteligente
+            </Heading>
+            <Text fontSize="lg">
+              Encuentra jugadores por nombre o alias en segundos.
+            </Text>
           </Box>
-          <Box p={6} bgGradient={cardGradient} borderRadius="2xl" color="white" boxShadow="xl" textAlign="center">
+          <Box
+            p={6}
+            bgGradient={cardGradient}
+            borderRadius="2xl"
+            color="white"
+            boxShadow="xl"
+            textAlign="center"
+            _hover={{ transform: "scale(1.03)" }}
+            transition="all 0.3s"
+          >
             <Icon as={FaChartBar} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>Estadísticas Avanzadas</Heading>
-            <Text fontSize="lg">Consulta stats clave como VPIP, PFR, 3Bet, WTSD, WWSF y más.</Text>
+            <Heading size="md" mb={2}>
+              Estadísticas Avanzadas
+            </Heading>
+            <Text fontSize="lg">
+              Consulta stats clave como VPIP, PFR, 3Bet, WTSD, WWSF y más.
+            </Text>
           </Box>
-          <Box p={6} bgGradient={cardGradient} borderRadius="2xl" color="white" boxShadow="xl" textAlign="center">
+          <Box
+            p={6}
+            bgGradient={cardGradient}
+            borderRadius="2xl"
+            color="white"
+            boxShadow="xl"
+            textAlign="center"
+            _hover={{ transform: "scale(1.03)" }}
+            transition="all 0.3s"
+          >
             <Icon as={FaRobot} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>Análisis con IA</Heading>
-            <Text fontSize="lg">Recibe informes explotativos listos para tomar acción en la mesa.</Text>
+            <Heading size="md" mb={2}>
+              Análisis con IA
+            </Heading>
+            <Text fontSize="lg">
+              Recibe informes explotativos listos para tomar acción en la mesa.
+            </Text>
           </Box>
         </SimpleGrid>
 
@@ -195,8 +324,9 @@ const Home = () => {
             </Text>
           </Flex>
           <Text fontSize="lg" color={subTextColor}>
-            Hemos sido validados por jugadores ganadores en NL100 y NL200.
-            Luciana EV 2.1 forma parte de su arsenal para explotar leaks y tomar decisiones más EV+ en tiempo real.
+            Validado por jugadores ganadores en NL100 y NL200, POKER PRO TRACK
+            2.1 forma parte de su arsenal para explotar leaks y tomar decisiones
+            EV+ en tiempo real.
           </Text>
         </Box>
       </Box>

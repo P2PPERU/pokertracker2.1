@@ -36,6 +36,8 @@ import {
   FaExclamationTriangle,
   FaMedal,
   FaSearch,
+  FaRegStar,
+  FaStar,
 } from "react-icons/fa";
 import api from '../services/api';
 import GraficoGanancias from '../components/GraficoGanancias';
@@ -45,21 +47,7 @@ import _ from 'lodash';
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
-
-  // Valores de color
-  const mainGradient = useColorModeValue(
-    "linear(to-r, #5D5FEF, #6A76FB)", 
-    "linear(to-r, #5D5FEF, #6A76FB)"
-  );
-  const cardBg = useColorModeValue("white", "gray.800");
-  const suggestionBg = useColorModeValue("white", "gray.700");
-  const suggestionBorderColor = useColorModeValue("gray.200", "gray.600");
-  const iconButtonColor = useColorModeValue("blue.600", "blue.200");
-  const selectFocusBorderColor = useColorModeValue("blue.600", "blue.300");
-  const inputBg = useColorModeValue("white", "gray.700");
-  const inputFocusBorderColor = useColorModeValue("blue.600", "blue.300");
-  const listItemHoverBg = useColorModeValue("gray.100", "gray.600");
-
+  const [esFavorito, setEsFavorito] = useState(false);
   const authData = useAuth();
   const auth = authData?.auth;
   const [jugador, setJugador] = useState(null);
@@ -70,13 +58,11 @@ const Dashboard = () => {
   const sugerenciasRef = useRef(null);
   const [salaSeleccionada, setSalaSeleccionada] = useState("XPK");
 
-  // Estado para estadísticas y copiado
   const [selectedStats, setSelectedStats] = useState({});
   const { onCopy, setValue } = useClipboard("");
   const [statsText, setStatsText] = useState("");
   const toast = useToast();
 
-  // Función para obtener sugerencias (se memoriza para usar en el debounce)
   const fetchSugerencias = useCallback(async (query) => {
     if (query.length < 3) {
       setSugerencias([]);
@@ -91,19 +77,16 @@ const Dashboard = () => {
     }
   }, [salaSeleccionada]);
 
-  // Debounce de la función de sugerencias
   const debouncedFetchSugerencias = useMemo(
-    () => _.debounce(fetchSugerencias, 300),
+    () => _.debounce(fetchSugerencias, 500),
     [fetchSugerencias]
   );
 
-  // Manejo del input con useCallback
   const handleInputChange = useCallback((e) => {
     setNombreBuscado(e.target.value);
     debouncedFetchSugerencias(e.target.value);
   }, [debouncedFetchSugerencias]);
 
-  // Función para buscar jugador (memoriza con useCallback)
   const buscarJugador = useCallback(async (nombre) => {
     setLoading(true);
     setSugerencias([]);
@@ -118,12 +101,10 @@ const Dashboard = () => {
     setLoading(false);
   }, [salaSeleccionada]);
 
-  // Buscar jugador predeterminado al montar
   useEffect(() => {
-    buscarJugador("laligamanager");
+    buscarJugador("ABCPK0206");
   }, [buscarJugador]);
 
-  // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sugerenciasRef.current && !sugerenciasRef.current.contains(event.target)) {
@@ -136,7 +117,6 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Cancelar el debounce al desmontar
   useEffect(() => {
     return () => {
       debouncedFetchSugerencias.cancel();
@@ -147,7 +127,6 @@ const Dashboard = () => {
 
   const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth.suscripcion);
 
-  // Memoriza la función de toggle para estadísticas
   const toggleStatSelection = useCallback((title, value) => {
     setSelectedStats((prev) => ({
       ...prev,
@@ -155,7 +134,6 @@ const Dashboard = () => {
     }));
   }, []);
 
-  // Actualizar el texto de estadísticas cuando cambian las estadísticas seleccionadas
   useEffect(() => {
     const computedStatsText = Object.entries(selectedStats)
       .filter(([_, value]) => value !== undefined)
@@ -185,7 +163,7 @@ const Dashboard = () => {
     "Fold to River Bet": "FoldRB",
     "Overbet Turn %": "OBT",
     "Overbet River %": "OBR",
-    "WSDwBR %": "WSDwBR",
+    "WSDWBR %": "WSDwBR",
     "Manos Jugadas": "Hands",
     "Ganancias USD": "Win$",
     "WINRATE": "WR"
@@ -244,9 +222,76 @@ const Dashboard = () => {
       });
   };
 
+  // ─────────────────────────────────────────────
+  // * Funciones para manejar el favorito *
+  // ─────────────────────────────────────────────
+
+  useEffect(() => {
+    if (jugador && auth && auth.id) {
+      const checkFavorito = async () => {
+        try {
+          const res = await api.get(`/favoritos/${auth.id}/${jugador.player_name}`);
+          setEsFavorito(res.data.favorito);
+        } catch (error) {
+          console.error("Error al verificar si el jugador es favorito:", error);
+        }
+      };
+      checkFavorito();
+    }
+  }, [jugador, auth]);
+
+  const toggleFavorito = async () => {
+    if (!jugador || !auth || !auth.id) return;
+    
+    if (!esFavorito) {
+      try {
+        const newFavorito = {
+          usuario_id: auth.id,
+          player_name: jugador.player_name,
+          sala: salaSeleccionada,
+        };
+        await api.post('/favoritos', newFavorito);
+        setEsFavorito(true);
+        toast({
+          title: "Jugador agregado a favoritos",
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: "Error al agregar jugador a favoritos",
+          description: error.message,
+          status: "error",
+          duration: 2000,
+          isClosable: true,
+        });
+      }
+    } else {
+      try {
+        await api.delete(`/favoritos/${auth.id}/${jugador.player_name}`);
+        setEsFavorito(false);
+        toast({
+          title: "Jugador removido de favoritos",
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: "Error al remover jugador de favoritos",
+          description: error.message,
+          status: "error",
+          duration: 2000,
+          isClosable: true,
+        });
+      }
+    }
+  };
+
   return (
-    <Box minH="100vh" bg="#DCE2E8" p={4}>
-      <Box maxW="1200px" mx="auto" p={6} bg={cardBg} rounded="lg" boxShadow="xl">
+    <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} p={4}>
+      <Box maxW="1200px" mx="auto" p={6} bg={useColorModeValue("white", "gray.800")} rounded="lg" boxShadow="xl">
         <Flex alignItems="center" justifyContent="space-between" mb={4}>
           <Heading size="lg">🔍 Estadísticas</Heading>
           <IconButton
@@ -254,7 +299,6 @@ const Dashboard = () => {
             icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
             onClick={toggleColorMode}
             variant="ghost"
-            color={iconButtonColor}
           />
         </Flex>
 
@@ -263,7 +307,6 @@ const Dashboard = () => {
             value={salaSeleccionada}
             onChange={(e) => setSalaSeleccionada(e.target.value)}
             maxW="200px"
-            focusBorderColor={selectFocusBorderColor}
           >
             <option value="XPK">X-Poker</option>
             <option value="PPP">PPPoker</option>
@@ -279,17 +322,14 @@ const Dashboard = () => {
               value={nombreBuscado}
               onChange={handleInputChange}
               onFocus={() => setMostrarSugerencias(true)}
-              bg={inputBg}
-              focusBorderColor={inputFocusBorderColor}
             />
             {mostrarSugerencias && sugerencias.length > 0 && (
               <List
                 ref={sugerenciasRef}
                 borderWidth="1px"
-                borderColor={suggestionBorderColor}
                 borderRadius="md"
                 mt={1}
-                bg={suggestionBg}
+                bg={useColorModeValue("white", "gray.700")}
                 position="absolute"
                 width="100%"
                 maxWidth="300px"
@@ -301,7 +341,6 @@ const Dashboard = () => {
                     key={index}
                     p={2}
                     cursor="pointer"
-                    _hover={{ background: listItemHoverBg }}
                     onClick={() => {
                       setNombreBuscado(jug.player_name);
                       buscarJugador(jug.player_name);
@@ -318,7 +357,6 @@ const Dashboard = () => {
             size="lg"
             color="white"
             bgGradient="linear(to-r, #5D5FEF, #6A76FB)"
-            _hover={{ bgGradient: "linear(to-r, #4c4feb, #5a64f9)" }}
             leftIcon={<FaSearch />}
             onClick={() => buscarJugador(nombreBuscado)}
           >
@@ -331,11 +369,23 @@ const Dashboard = () => {
 
         {jugador && (
           <>
+            <Flex alignItems="center" gap={2} mb={4}>
+              <Badge colorScheme="green" fontSize="lg">
+                {jugador.player_name}
+              </Badge>
+              <IconButton
+                icon={esFavorito ? <FaStar /> : <FaRegStar />}
+                aria-label={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+                onClick={toggleFavorito}
+                variant="ghost"
+                colorScheme={esFavorito ? "yellow" : "gray"}
+              />
+            </Flex>
+
             <Flex gap={2} mb={4}>
               <Button
                 color="white"
                 bgGradient="linear(to-r, #5D5FEF, #6A76FB)"
-                _hover={{ bgGradient: "linear(to-r, #4c4feb, #5a64f9)" }}
                 onClick={copyStats}
                 isDisabled={Object.keys(selectedStats).length === 0}
               >
@@ -353,17 +403,8 @@ const Dashboard = () => {
               </Box>
 
               <Box flex="3" minW="300px">
-                <Badge colorScheme="green" fontSize="lg">
-                  {jugador.player_name}
-                </Badge>
-
-                <Grid
-                  templateColumns="repeat(auto-fit, minmax(120px, 1fr))"
-                  gap={2}
-                  justifyContent="center"
-                  alignItems="center"
-                  mt={4}
-                >
+                {/* Grid para mostrar 6 stat boxes por fila tanto en mobile como en web */}
+                <Grid templateColumns="repeat(6, 1fr)" gap={2} mt={4}>
                   <StatBox
                     icon={FaHandPaper}
                     title="Manos Jugadas"
@@ -413,7 +454,6 @@ const Dashboard = () => {
                     onClick={() => toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)}
                     isSelected={selectedStats["Fold to 3-BET"] !== undefined}
                   />
-
                   {tieneSuscripcionAvanzada && (
                     <>
                       <StatBox

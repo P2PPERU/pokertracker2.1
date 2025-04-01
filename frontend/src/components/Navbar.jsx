@@ -36,7 +36,7 @@ const Navbar = () => {
           to="/"
           _hover={{ textDecoration: "none", color: "cyan.100" }}
         >
-          Luciana EV 2.1 🚀
+          POKER PRO TRACK 2.1 🚀
         </Link>
       </Text>
 
@@ -92,6 +92,21 @@ const Navbar = () => {
             Suscripciones
           </Button>
         </Link>
+
+        {/* Mostrar el enlace a Favoritos solo si el usuario está autenticado */}
+        {auth && (
+          <Link as={RouterLink} to="/favoritos">
+            <Button
+              variant="ghost"
+              fontSize="lg"
+              fontWeight="medium"
+              color={navItemColor}
+              _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+            >
+              Favoritos
+            </Button>
+          </Link>
+        )}
 
         {/* Perfil, Admin & Logout */}
         {auth ? (
