@@ -1,22 +1,17 @@
-import React, { useEffect, useState } from 'react';
+// pages/Favoritos.jsx
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Heading,
-  Text,
-  Spinner,
-  List,
-  ListItem,
-  IconButton,
+  Grid,
   Flex,
   Badge,
-  useToast,
-  Grid,
-  GridItem,
   useColorModeValue,
-} from '@chakra-ui/react';
+  Spinner,
+} from "@chakra-ui/react";
 import {
-  FaTrash,
   FaStar,
+  FaTrash,
   FaHandPaper,
   FaDollarSign,
   FaChartLine,
@@ -24,287 +19,149 @@ import {
   FaArrowUp,
   FaArrowDown,
   FaSyncAlt,
+  FaWalking,
   FaHandPointUp,
   FaPercentage,
   FaWater,
   FaExclamationTriangle,
   FaMedal,
-  FaWalking,
-} from 'react-icons/fa';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+} from "react-icons/fa";
+import api from "../services/api";
+import StatBox from "../components/StatBox";
+import { useAuth } from "../context/AuthContext";
 
 const Favoritos = () => {
-  const { auth } = useAuth();
+  const cardBg = useColorModeValue("white", "gray.800");
   const [favoritos, setFavoritos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [playerLoading, setPlayerLoading] = useState(false);
-  const toast = useToast();
+  const [datos, setDatos] = useState({});
+  const [mostrarStats, setMostrarStats] = useState({});
 
-  // Cargar la lista de favoritos del usuario
-  const fetchFavoritos = async () => {
-    if (!auth || !auth.id) {
-      setFavoritos([]);
-      setLoading(false);
-      return;
-    }
-    try {
-      const res = await api.get(`/favoritos/${auth.id}`);
-      setFavoritos(res.data);
-    } catch (error) {
-      console.error('Error al obtener favoritos:', error);
-      toast({
-        title: 'Error al cargar favoritos',
-        description: 'No se pudieron obtener los favoritos.',
-        status: 'error',
-        duration: 2000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const auth = useAuth()?.auth;
+  const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth?.suscripcion);
 
   useEffect(() => {
-    fetchFavoritos();
-  }, [auth]);
-
-  // Eliminar favorito
-  const removeFavorito = async (player_name) => {
-    if (!auth || !auth.id) return;
-    try {
-      await api.delete(`/favoritos/${auth.id}/${player_name}`);
-      toast({
-        title: 'Favorito eliminado',
-        status: 'success',
-        duration: 2000,
-        isClosable: true,
-      });
-      setFavoritos((prev) =>
-        prev.filter((fav) => fav.player_name !== player_name)
-      );
-      // Si el jugador eliminado estaba seleccionado, se ocultan las estadísticas.
-      if (selectedPlayer && selectedPlayer.player_name === player_name) {
-        setSelectedPlayer(null);
-      }
-    } catch (error) {
-      console.error('Error al eliminar favorito:', error);
-      toast({
-        title: 'Error al eliminar favorito',
-        description: error.message,
-        status: 'error',
-        duration: 2000,
-        isClosable: true,
-      });
-    }
-  };
-
-  // Al hacer click en el recuadro del jugador, se consultan sus estadísticas.
-  // Si se hace click sobre el mismo jugador, se oculta la sección.
-  const handleSelectPlayer = async (fav) => {
-    if (selectedPlayer && selectedPlayer.player_name === fav.player_name) {
-      setSelectedPlayer(null);
-      return;
-    }
-    setPlayerLoading(true);
-    try {
-      const res = await api.get(
-        `/jugador/${fav.sala}/${encodeURIComponent(fav.player_name)}`
-      );
-      setSelectedPlayer(res.data);
-    } catch (error) {
-      console.error('Error al obtener estadísticas del jugador:', error);
-      toast({
-        title: 'Error al cargar estadísticas',
-        description: 'No se pudieron obtener las estadísticas del jugador.',
-        status: 'error',
-        duration: 2000,
-        isClosable: true,
-      });
-    } finally {
-      setPlayerLoading(false);
-    }
-  };
-
-  // Componente para mostrar cada estadística (similar al Dashboard)
-  const StatBox = React.memo(({ icon: Icon, title, value }) => {
-    const defaultBorderColor = useColorModeValue("gray.200", "gray.600");
-    const bgColor = useColorModeValue("white", "gray.700");
-    const iconDefaultColor = useColorModeValue("gray.500", "gray.200");
-    const textColor = useColorModeValue("gray.600", "gray.300");
-
-    let numericValue = value;
-    const excludedStats = ["Manos Jugadas", "Ganancias USD", "WINRATE"];
-    if (!excludedStats.includes(title)) {
-      let parsedValue = parseFloat(value);
-      if (!isNaN(parsedValue)) {
-        numericValue = Math.round(parsedValue);
-      } else {
-        numericValue = value.includes("%") || value.includes("$") ? value : "—";
+    const guardados = localStorage.getItem("favoritos");
+    if (guardados) {
+      try {
+        const parseados = JSON.parse(guardados);
+        setFavoritos(parseados);
+      } catch (e) {
+        console.error("Error al parsear favoritos:", e);
       }
     }
+  }, []);
 
+  const eliminarFavorito = (nombre) => {
+    const nuevosFavoritos = favoritos.filter((j) => j.player_name !== nombre);
+    setFavoritos(nuevosFavoritos);
+    localStorage.setItem("favoritos", JSON.stringify(nuevosFavoritos));
+  };
+
+  const cargarDatos = useCallback(async () => {
+    const resultados = {};
+    for (const favorito of favoritos) {
+      try {
+        const res = await api.get(`/jugador/XPK/${encodeURIComponent(favorito.player_name)}`);
+        resultados[favorito.player_name] = res.data;
+      } catch (error) {
+        console.error(`Error cargando datos de ${favorito.player_name}:`, error);
+      }
+    }
+    setDatos(resultados);
+  }, [favoritos]);
+
+  useEffect(() => {
+    if (favoritos.length > 0) {
+      cargarDatos();
+    }
+  }, [favoritos, cargarDatos]);
+
+  const toggleStats = (nombre) => {
+    setMostrarStats((prev) => ({
+      ...prev,
+      [nombre]: !prev[nombre],
+    }));
+  };
+
+  if (!favoritos.length) {
     return (
-      <GridItem
-        p={2}
-        border="1px solid"
-        borderColor={defaultBorderColor}
-        borderRadius="md"
-        bg={bgColor}
-        boxShadow="md"
-        textAlign="center"
-        transition="all 0.2s"
-        _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        minH="90px"
-      >
-        {Icon && (
-          <Box color={iconDefaultColor} mb={1}>
-            <Icon size="20px" />
-          </Box>
-        )}
-        <Text fontWeight="bold" fontSize="xs" color={textColor}>
-          {title.toUpperCase()}
-        </Text>
-        <Text fontSize="lg" fontWeight="semibold">
-          {numericValue}
-        </Text>
-      </GridItem>
+      <Box p={8}>
+        <Heading size="md">⭐ No tienes jugadores favoritos aún</Heading>
+      </Box>
     );
-  });
-
-  if (loading) return <Spinner size="xl" color="blue.500" />;
-
-  // Definir las estadísticas disponibles
-  const allStats = selectedPlayer
-    ? [
-        { icon: FaHandPaper, title: "Manos Jugadas", value: selectedPlayer.total_manos },
-        { icon: FaDollarSign, title: "Ganancias USD", value: `$${selectedPlayer.win_usd}` },
-        { icon: FaChartLine, title: "WINRATE", value: `${selectedPlayer.bb_100} BB/100` },
-        { icon: FaChartPie, title: "VPIP", value: `${selectedPlayer.vpip}%` },
-        { icon: FaArrowUp, title: "PFR", value: `${selectedPlayer.pfr}%` },
-        { icon: FaSyncAlt, title: "3 BET", value: `${selectedPlayer.three_bet}%` },
-        { icon: FaArrowDown, title: "Fold to 3-BET", value: `${selectedPlayer.fold_to_3bet_pct}%` },
-        { icon: FaArrowUp, title: "4Bet Preflop", value: `${selectedPlayer.four_bet_preflop_pct}%` },
-        { icon: FaArrowDown, title: "Fold to 4Bet", value: `${selectedPlayer.fold_to_4bet_pct}%` },
-        { icon: FaChartPie, title: "CBet Flop", value: `${selectedPlayer.cbet_flop}%` },
-        { icon: FaChartPie, title: "CBet Turn", value: `${selectedPlayer.cbet_turn}%` },
-        { icon: FaPercentage, title: "WWSF", value: `${selectedPlayer.wwsf}%` },
-        { icon: FaPercentage, title: "WTSD", value: `${selectedPlayer.wtsd}%` },
-        { icon: FaPercentage, title: "WSD", value: `${selectedPlayer.wsd}%` },
-        { icon: FaWalking, title: "Limp%", value: `${selectedPlayer.limp_pct}%` },
-        { icon: FaHandPointUp, title: "LimpRaise %", value: `${selectedPlayer.limp_raise_pct}%` },
-        { icon: FaArrowDown, title: "Fold to Flop CBet", value: `${selectedPlayer.fold_to_flop_cbet_pct}%` },
-        { icon: FaArrowDown, title: "Fold to Turn CBet", value: `${selectedPlayer.fold_to_turn_cbet_pct}%` },
-        { icon: FaChartPie, title: "Probe Bet Turn %", value: `${selectedPlayer.probe_bet_turn_pct}%` },
-        { icon: FaWater, title: "Bet River %", value: `${selectedPlayer.bet_river_pct}%` },
-        { icon: FaArrowDown, title: "Fold to River Bet", value: `${selectedPlayer.fold_to_river_bet_pct}%` },
-        { icon: FaExclamationTriangle, title: "Overbet Turn %", value: `${selectedPlayer.overbet_turn_pct}%` },
-        { icon: FaExclamationTriangle, title: "Overbet River %", value: `${selectedPlayer.overbet_river_pct}%` },
-        { icon: FaMedal, title: "WSDWBR %", value: `${selectedPlayer.wsdwbr_pct}%` },
-      ]
-    : [];
-
-  // Para usuarios "bronce" solo se muestran algunas estadísticas
-  const allowedStatsForBronze = [
-    "Manos Jugadas",
-    "Ganancias USD",
-    "WINRATE",
-    "VPIP",
-    "PFR",
-    "3 BET",
-    "Fold to 3-BET",
-  ];
-
-  const statsToShow =
-    auth && auth.suscripcion === "bronce"
-      ? allStats.filter((stat) => allowedStatsForBronze.includes(stat.title))
-      : allStats;
+  }
 
   return (
-    <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} p={4}>
-      <Box
-        maxW="1200px"
-        mx="auto"
-        bg={useColorModeValue("white", "gray.800")}
-        p={6}
-        rounded="lg"
-        boxShadow="lg"
-      >
-        <Heading mb={4} color={useColorModeValue("gray.800", "white")}>
-          Mis Jugadores Favoritos
-        </Heading>
-        {favoritos.length === 0 ? (
-          <Text color={useColorModeValue("gray.600", "gray.300")}>
-            No tienes jugadores favoritos.
-          </Text>
-        ) : (
-          <List spacing={3}>
-            {favoritos.map((fav) => (
-              <ListItem
-                key={fav.id}
-                p={3}
-                borderWidth="1px"
-                rounded="md"
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-                cursor="pointer"
-                onClick={() => handleSelectPlayer(fav)}
-                bg={useColorModeValue("gray.50", "gray.700")}
-              >
-                <Flex align="center" gap={3}>
-                  <Badge colorScheme="yellow" fontSize="lg">
-                    <FaStar />
+    <Box minH="100vh" bg="#DCE2E8" p={4}>
+      <Box maxW="1200px" mx="auto" p={6} bg={cardBg} rounded="lg" boxShadow="xl">
+        <Heading mb={6}>⭐ Jugadores Favoritos</Heading>
+
+        {favoritos.map((jugador, idx) => {
+          const data = datos[jugador.player_name];
+
+          return (
+            <Box key={idx} mb={8}>
+              <Flex align="center" justify="space-between" mb={2}>
+                <Flex align="center" cursor="pointer" onClick={() => toggleStats(jugador.player_name)}>
+                  <Badge colorScheme="green" fontSize="lg" mr={2}>
+                    {jugador.player_name}
                   </Badge>
-                  <Box>
-                    <Text fontWeight="bold" color={useColorModeValue("gray.800", "white")}>
-                      {fav.player_name}
-                    </Text>
-                    <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.300")}>
-                      Sala: {fav.sala}
-                    </Text>
-                    <Text fontSize="xs" color={useColorModeValue("gray.500", "gray.400")}>
-                      Fecha agregado: {new Date(fav.fecha_agregado).toLocaleDateString()}
-                    </Text>
-                  </Box>
+                  <FaStar color="gold" />
                 </Flex>
-                <IconButton
-                  icon={<FaTrash />}
-                  aria-label="Eliminar favorito"
-                  colorScheme="red"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFavorito(fav.player_name);
-                  }}
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
+                <Box
+                  cursor="pointer"
+                  onClick={() => eliminarFavorito(jugador.player_name)}
+                  _hover={{ transform: "scale(1.1)" }}
+                >
+                  <FaTrash color="red" />
+                </Box>
+              </Flex>
 
-        {playerLoading && (
-          <Flex justifyContent="center" mt={4}>
-            <Spinner size="md" color="blue.500" />
-          </Flex>
-        )}
+              {!data && <Spinner size="sm" />}
+              {data && mostrarStats[jugador.player_name] && (
+                <Grid
+                  templateColumns="repeat(6, 1fr)"
+                  gap={2}
+                  justifyContent="start"
+                  alignItems="center"
+                  mt={4}
+                  overflowX="auto"
+                  whiteSpace="nowrap"
+                >
+                  <StatBox icon={FaHandPaper} title="Manos Jugadas" value={data.total_manos} />
+                  <StatBox icon={FaDollarSign} title="Ganancias USD" value={`$${data.win_usd}`} />
+                  <StatBox icon={FaChartLine} title="WINRATE" value={`${data.bb_100} BB/100`} />
+                  <StatBox icon={FaChartPie} title="VPIP" value={`${data.vpip}%`} />
+                  <StatBox icon={FaArrowUp} title="PFR" value={`${data.pfr}%`} />
+                  <StatBox icon={FaSyncAlt} title="3 BET" value={`${data.three_bet}%`} />
+                  <StatBox icon={FaArrowDown} title="Fold to 3-BET" value={`${data.fold_to_3bet_pct}%`} />
 
-        {selectedPlayer && !playerLoading && (
-          <Box mt={8}>
-            <Heading size="md" mb={4} color={useColorModeValue("gray.800", "white")}>
-              Estadísticas de {selectedPlayer.player_name}
-            </Heading>
-            <Grid templateColumns="repeat(auto-fit, minmax(120px, 1fr))" gap={2}>
-              {statsToShow.map((stat, idx) => (
-                <StatBox key={idx} icon={stat.icon} title={stat.title} value={stat.value} />
-              ))}
-            </Grid>
-          </Box>
-        )}
+                  {tieneSuscripcionAvanzada && (
+                    <>
+                      <StatBox icon={FaArrowUp} title="4Bet Preflop" value={`${data.four_bet_preflop_pct}%`} />
+                      <StatBox icon={FaArrowDown} title="Fold to 4-Bet" value={`${data.fold_to_4bet_pct}%`} />
+                      <StatBox icon={FaChartPie} title="CBet Flop" value={`${data.cbet_flop}%`} />
+                      <StatBox icon={FaChartPie} title="CBet Turn" value={`${data.cbet_turn}%`} />
+                      <StatBox icon={FaPercentage} title="WWSF" value={`${data.wwsf}%`} />
+                      <StatBox icon={FaPercentage} title="WTSD" value={`${data.wtsd}%`} />
+                      <StatBox icon={FaPercentage} title="WSD" value={`${data.wsd}%`} />
+                      <StatBox icon={FaWalking} title="Limp %" value={`${data.limp_pct}%`} />
+                      <StatBox icon={FaHandPointUp} title="Limp-Raise %" value={`${data.limp_raise_pct}%`} />
+                      <StatBox icon={FaArrowDown} title="Fold to Flop CBet" value={`${data.fold_to_flop_cbet_pct}%`} />
+                      <StatBox icon={FaArrowDown} title="Fold to Turn CBet" value={`${data.fold_to_turn_cbet_pct}%`} />
+                      <StatBox icon={FaChartPie} title="Probe Bet Turn %" value={`${data.probe_bet_turn_pct}%`} />
+                      <StatBox icon={FaWater} title="Bet River %" value={`${data.bet_river_pct}%`} />
+                      <StatBox icon={FaArrowDown} title="Fold to River Bet" value={`${data.fold_to_river_bet_pct}%`} />
+                      <StatBox icon={FaExclamationTriangle} title="Overbet Turn %" value={`${data.overbet_turn_pct}%`} />
+                      <StatBox icon={FaExclamationTriangle} title="Overbet River %" value={`${data.overbet_river_pct}%`} />
+                      <StatBox icon={FaMedal} title="WSDwBR %" value={`${data.wsdwbr_pct}%`} />
+                    </>
+                  )}
+                </Grid>
+              )}
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );

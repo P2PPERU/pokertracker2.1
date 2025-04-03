@@ -50,115 +50,87 @@ const GraficoGanancias = ({ nombre, chartWidth = 1150, chartHeight = 500 }) => {
   }, [nombre]);
 
   return (
-    <Box 
-      position="relative" 
-      width={`${chartWidth}px`} 
-      height={`${chartHeight}px`}
-      m="0 auto"  // Centrado horizontalmente
+    <Box
+      width="100%"
+      overflowX="auto"
+      px={2}
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{ top: 20, right: 20, left: 20, bottom: 30 }}
-          style={{
-            backgroundColor: chartBg,
-            borderRadius: '12px',
-            padding: '10px',
-            transition: 'background-color 0.3s ease',
-          }}
-        >
-          <CartesianGrid stroke={gridColor} strokeDasharray="3 3" />
-          <XAxis dataKey="hand_group" stroke={axisColor} />
-          <YAxis stroke={axisColor} />
-
-          <Tooltip
-            contentStyle={{
-              backgroundColor: tooltipBg,
-              borderRadius: '10px',
-              border: `1px solid ${tooltipBorder}`,
+      <Box
+        position="relative"
+        width={`${chartWidth}px`}
+        height={`${chartHeight}px`}
+        m="0 auto"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={data}
+            margin={{ top: 20, right: 20, left: 20, bottom: 30 }}
+            style={{
+              backgroundColor: chartBg,
+              borderRadius: '12px',
+              padding: '10px',
+              transition: 'background-color 0.3s ease',
             }}
-            formatter={(value) => `${value.toFixed(2)} USD`}
-            labelFormatter={(label) => `Mano: ${label}`}
-          />
-          <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-          <ReferenceLine y={0} stroke="#000" strokeWidth={2} />
+          >
+            <CartesianGrid stroke={gridColor} strokeDasharray="3 3" />
+            <XAxis dataKey="hand_group" stroke={axisColor} />
+            <YAxis stroke={axisColor} />
 
-          <Line
-            type="monotone"
-            dataKey="total_money_won"
-            stroke="#00AA00"   // Verde para Net Won
-            strokeWidth={2.5}
-            dot={false}
-            name="Net Won"
-          />
-          <Line
-            type="monotone"
-            dataKey="total_mwnsd"
-            stroke="#FF0000"   // Rojo para Won Without Showdown
-            strokeWidth={2}
-            dot={false}
-            name="Won Without Showdown"
-          />
-          <Line
-            type="monotone"
-            dataKey="total_mwsd"
-            stroke="#0000FF"   // Azul para Won With Showdown
-            strokeWidth={2}
-            dot={false}
-            name="Won With Showdown"
-          />
-        </LineChart>
-      </ResponsiveContainer>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: tooltipBg,
+                borderRadius: '10px',
+                border: `1px solid ${tooltipBorder}`,
+              }}
+              formatter={(value) => `${value.toFixed(2)} USD`}
+              labelFormatter={(label) => `Mano: ${label}`}
+            />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+            <ReferenceLine y={0} stroke="#000" strokeWidth={2} />
 
-      {/* Marca de agua en la parte superior izquierda */}
-      <Box
-        position="absolute"
-        top="30%"
-        left="20%"
-        transform="translate(-50%, -50%) rotate(-30deg)"
-        pointerEvents="none"
-        opacity={0.15}
-        fontSize="52px"
-        fontWeight="bold"
-        color={watermarkColor}
-        userSelect="none"
-        textAlign="center"
-      >
-        Poker Track PRO
-      </Box>
+            <Line
+              type="monotone"
+              dataKey="total_money_won"
+              stroke="#00AA00"
+              strokeWidth={2.5}
+              dot={false}
+              name="Net Won"
+            />
+            <Line
+              type="monotone"
+              dataKey="total_mwnsd"
+              stroke="#FF0000"
+              strokeWidth={2}
+              dot={false}
+              name="Won Without Showdown"
+            />
+            <Line
+              type="monotone"
+              dataKey="total_mwsd"
+              stroke="#0000FF"
+              strokeWidth={2}
+              dot={false}
+              name="Won With Showdown"
+            />
+          </LineChart>
+        </ResponsiveContainer>
 
-      {/* Marca de agua en el centro */}
-      <Box
-        position="absolute"
-        top="50%"
-        left="50%"
-        transform="translate(-50%, -50%) rotate(-30deg)"
-        pointerEvents="none"
-        opacity={0.15}
-        fontSize="52px"
-        fontWeight="bold"
-        color={watermarkColor}
-        userSelect="none"
-        textAlign="center"
-      >
-        Poker Track PRO
-      </Box>
-
-      {/* Marca de agua en la parte inferior derecha */}
-      <Box
-        position="absolute"
-        bottom="25%"
-        right="20%"
-        transform="translate(50%, 50%) rotate(-30deg)"
-        pointerEvents="none"
-        opacity={0.15}
-        fontSize="52px"
-        fontWeight="bold"
-        color={watermarkColor}
-        userSelect="none"
-        textAlign="center"
-      >
-        Poker Track PRO
+        {/* Marca de agua (centro) */}
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%) rotate(-30deg)"
+          pointerEvents="none"
+          opacity={0.15}
+          fontSize="52px"
+          fontWeight="bold"
+          color={watermarkColor}
+          userSelect="none"
+          textAlign="center"
+        >
+          Poker Track PRO
+        </Box>
       </Box>
     </Box>
   );

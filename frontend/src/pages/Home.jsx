@@ -14,18 +14,27 @@ import {
 } from "@chakra-ui/react";
 import { FaSearch, FaChartBar, FaRobot, FaStar } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const MotionBox = motion(Box);
 
 const Home = () => {
-  const { login, logout, auth } = useAuth();
+  const { auth } = useAuth();
+  const navigate = useNavigate();
 
   const abrirModalLogin = () => {
     const event = new CustomEvent("abrir-modal-login");
     window.dispatchEvent(event);
   };
 
-  // Colores y estilos según modo claro/oscuro
+  const handleRedirect = () => {
+    if (auth) {
+      navigate("/dashboard");
+    } else {
+      abrirModalLogin();
+    }
+  };
+
   const bg = useColorModeValue("#f7f9fc", "#0a0f1a");
   const cardBg = useColorModeValue("white", "#202738");
   const headingColor = useColorModeValue("gray.900", "teal.200");
@@ -40,7 +49,27 @@ const Home = () => {
 
   return (
     <>
-      {/* Barra superior */}
+      {/* Simulación de menú hover-only (debe estar realmente en Navbar.jsx para mejor control) */}
+      <Box
+        display={["none", "flex"]}
+        _hover={{ display: "flex" }}
+        position="absolute"
+        top="0"
+        left="0"
+        w="100%"
+        zIndex="100"
+        bgGradient="linear(to-r, #2BB5E0, #8266D4)"
+        p={4}
+        justifyContent="center"
+        fontWeight="bold"
+        fontSize="md"
+        color="white"
+      >
+        {/* Aquí irían los enlaces reales del navbar si quieres que sea fijo */}
+        Menú superior (simulado)
+      </Box>
+
+      {/* Línea superior decorativa */}
       <Box
         height="3px"
         bg="teal.400"
@@ -48,7 +77,7 @@ const Home = () => {
         boxShadow="0 0 15px rgba(20, 241, 198, 0.7)"
       />
 
-      {/* Sección principal */}
+      {/* Hero principal */}
       <Box
         as="section"
         bg={bg}
@@ -71,11 +100,12 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Flex align="center" gap={3} mb={3}>
+            <Flex align="center" gap={3} mb={3} justify={["center", "flex-start"]}>
               <Heading
                 fontSize={["3xl", "4xl", "5xl"]}
                 color={headingColor}
                 lineHeight="shorter"
+                textAlign={["center", "left"]}
               >
                 Bienvenido a{" "}
                 <Text
@@ -105,6 +135,8 @@ const Home = () => {
               color={subTextColor}
               mb={8}
               maxW="500px"
+              textAlign={["center", "left"]}
+              mx={["auto", "0"]}
             >
               Tu asistente profesional para el análisis explotativo de jugadores
               de cash. Accede a estadísticas reales, informes de IA y toma
@@ -112,11 +144,9 @@ const Home = () => {
             </Text>
 
             <Button
-              onClick={abrirModalLogin}
-              size="lg"
-              px={10}
-              py={6}
-              fontSize="xl"
+              onClick={handleRedirect}
+              size={["md", "lg"]}
+              fontSize={["md", "xl"]}
               fontWeight="bold"
               bgGradient="linear(to-r, teal.300, blue.400, purple.500)"
               color="white"
@@ -126,6 +156,10 @@ const Home = () => {
               }}
               boxShadow="lg"
               borderRadius="xl"
+              px={[6, 10]}
+              py={[4, 6]}
+              w={["80%", "auto"]}
+              mx={["auto", "0"]}
             >
               Generador de EV 🚀
             </Button>
@@ -138,6 +172,7 @@ const Home = () => {
             borderRadius="xl"
             maxW="500px"
             bgGradient="linear(to-r, teal.300, blue.400, purple.500)"
+            mx={["auto", "0"]}
           >
             <Box borderRadius="lg" overflow="hidden" bg="white">
               <Image
@@ -175,7 +210,6 @@ const Home = () => {
           <Icon as={FaChartBar} /> ¿Qué puedes lograr con POKER PRO TRACK?
         </Heading>
 
-        {/* Contenedor centrado de la sección */}
         <Flex
           direction="column"
           gap={8}
@@ -185,7 +219,6 @@ const Home = () => {
           maxW="700px"
           mx="auto"
         >
-          {/* Imagen del gráfico */}
           <Box w="full" textAlign="center">
             <Image
               src="/images/graficoweb.png"
@@ -199,7 +232,6 @@ const Home = () => {
             />
           </Box>
 
-          {/* Imagen de estadísticas y análisis */}
           <Box w="full" textAlign="center">
             <Image
               src="/images/statweb.png"
@@ -216,33 +248,33 @@ const Home = () => {
               fontSize="md"
               color={analysisTextColor}
               boxShadow="sm"
+              textAlign="left"
             >
               <Text fontWeight="bold" mb={2}>
                 🧠 Análisis IA:
               </Text>
               <Text mb={1}>
-                <strong>Estilo:</strong> TAG con tendencia a la pasividad
-                preflop. Aumenta agresión postflop en spots seleccionados, pero
-                sin consistencia.
+                <strong>Estilo:</strong> TAG con tendencia a la pasividad preflop...
               </Text>
               <Text mb={1}>
-                <strong>Errores:</strong> VPIP alto, PFR bajo. Se frena en el
-                turn. WTSD bajo comparado con WSD, no maximiza sus manos
-                fuertes.
+                <strong>Errores:</strong> VPIP alto, PFR bajo...
               </Text>
               <Text>
-                <strong>Explotación:</strong> Flotar más en flop y atacar en
-                turn. Ajusta para extraer valor cuando te paga.
+                <strong>Explotación:</strong> Flotar más en flop y atacar en turn...
               </Text>
             </Box>
 
-            {/* Botón más pequeño y centrado */}
             <Button
               mt={6}
               colorScheme="teal"
-              size="md"
-              onClick={abrirModalLogin}
+              size={["sm", "md"]}
+              onClick={handleRedirect}
               borderRadius="xl"
+              px={[5, 6]}
+              py={[3, 4]}
+              w={["80%", "auto"]}
+              mx="auto"
+              display="block"
             >
               🚀 Analiza a tus oponentes ahora
             </Button>
@@ -259,60 +291,27 @@ const Home = () => {
           mx="auto"
           mb={12}
         >
-          <Box
-            p={6}
-            bgGradient={cardGradient}
-            borderRadius="2xl"
-            color="white"
-            boxShadow="xl"
-            textAlign="center"
-            _hover={{ transform: "scale(1.03)" }}
-            transition="all 0.3s"
-          >
-            <Icon as={FaSearch} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>
-              Búsqueda Inteligente
-            </Heading>
-            <Text fontSize="lg">
-              Encuentra jugadores por nombre o alias en segundos.
-            </Text>
-          </Box>
-          <Box
-            p={6}
-            bgGradient={cardGradient}
-            borderRadius="2xl"
-            color="white"
-            boxShadow="xl"
-            textAlign="center"
-            _hover={{ transform: "scale(1.03)" }}
-            transition="all 0.3s"
-          >
-            <Icon as={FaChartBar} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>
-              Estadísticas Avanzadas
-            </Heading>
-            <Text fontSize="lg">
-              Consulta stats clave como VPIP, PFR, 3Bet, WTSD, WWSF y más.
-            </Text>
-          </Box>
-          <Box
-            p={6}
-            bgGradient={cardGradient}
-            borderRadius="2xl"
-            color="white"
-            boxShadow="xl"
-            textAlign="center"
-            _hover={{ transform: "scale(1.03)" }}
-            transition="all 0.3s"
-          >
-            <Icon as={FaRobot} w={12} h={12} color="white" mb={4} />
-            <Heading size="md" mb={2}>
-              Análisis con IA
-            </Heading>
-            <Text fontSize="lg">
-              Recibe informes explotativos listos para tomar acción en la mesa.
-            </Text>
-          </Box>
+          {[
+            { icon: FaSearch, title: "Búsqueda Inteligente", desc: "Encuentra jugadores por nombre o alias en segundos." },
+            { icon: FaChartBar, title: "Estadísticas Avanzadas", desc: "Consulta stats clave como VPIP, PFR, 3Bet, WTSD, WWSF y más." },
+            { icon: FaRobot, title: "Análisis con IA", desc: "Recibe informes explotativos listos para tomar acción en la mesa." },
+          ].map((feature, i) => (
+            <Box
+              key={i}
+              p={6}
+              bgGradient={cardGradient}
+              borderRadius="2xl"
+              color="white"
+              boxShadow="xl"
+              textAlign="center"
+              _hover={{ transform: "scale(1.03)" }}
+              transition="all 0.3s"
+            >
+              <Icon as={feature.icon} w={12} h={12} color="white" mb={4} />
+              <Heading size="md" mb={2}>{feature.title}</Heading>
+              <Text fontSize="lg">{feature.desc}</Text>
+            </Box>
+          ))}
         </SimpleGrid>
 
         <Box textAlign="center" maxW="900px" mx="auto">
@@ -324,9 +323,7 @@ const Home = () => {
             </Text>
           </Flex>
           <Text fontSize="lg" color={subTextColor}>
-            Validado por jugadores ganadores en NL100 y NL200, POKER PRO TRACK
-            2.1 forma parte de su arsenal para explotar leaks y tomar decisiones
-            EV+ en tiempo real.
+            Validado por jugadores ganadores en NL100 y NL200...
           </Text>
         </Box>
       </Box>
