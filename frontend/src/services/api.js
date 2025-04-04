@@ -1,15 +1,19 @@
-import axios from 'axios'
+import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-})
+});
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  try {
+    const auth = JSON.parse(localStorage.getItem('auth'));
+    if (auth?.token) {
+      config.headers.Authorization = `Bearer ${auth.token}`;
+    }
+  } catch (error) {
+    console.warn("No se pudo leer el token desde localStorage:", error);
   }
-  return config
-})
+  return config;
+});
 
-export default api
+export default api;

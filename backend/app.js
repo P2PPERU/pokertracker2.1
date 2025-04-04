@@ -25,9 +25,9 @@ app.get("/", (req, res) => {
 });
 
 // 📌 Otras rutas
+app.use("/api/favoritos", favoritesRoutes)
 app.use("/api", jugadorRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/favoritos", favoritesRoutes); // <-- Montar la ruta de favoritos
+app.use("/api/admin", adminRoutes); // <-- Montar la ruta de favoritos
 
 // 🚀 Puerto del servidor
 const PORT = process.env.PORT || 3000;

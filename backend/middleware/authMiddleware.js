@@ -4,6 +4,7 @@ const pool = require("../config/db");
 // 📌 Middleware principal que verifica el token y actualiza suscripción si expiró
 const verificarToken = async (req, res, next) => {
   const authHeader = req.header("Authorization");
+  console.log("🔍 Authorization Header:", authHeader);
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
@@ -15,6 +16,7 @@ const verificarToken = async (req, res, next) => {
 
   try {
     const verificado = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Decodificado del token:", verificado);
     const usuarioId = verificado.id;
 
     // 🔍 Consultamos desde la BD para validar expiración real

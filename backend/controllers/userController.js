@@ -80,10 +80,16 @@ const login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol },
+            {
+              id: usuario.id,
+              nombre: usuario.nombre,
+              email: usuario.email,
+              rol: usuario.rol,
+              suscripcion: usuario.suscripcion, // ✅ agrega esto
+            },
             process.env.JWT_SECRET,
-            { expiresIn: "7d" } // 🔒 Expira en 7 días
-        );
+            { expiresIn: "7d" }
+          );
 
         res.json({ mensaje: "Login exitoso", token, usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } });
     } catch (error) {

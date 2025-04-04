@@ -1,4 +1,3 @@
-// pages/Favoritos.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
@@ -35,33 +34,46 @@ const Favoritos = () => {
   const [favoritos, setFavoritos] = useState([]);
   const [datos, setDatos] = useState({});
   const [mostrarStats, setMostrarStats] = useState({});
+  const [refreshFavorites, setRefreshFavorites] = useState(0);
 
   const auth = useAuth()?.auth;
   const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth?.suscripcion);
 
   useEffect(() => {
-    const guardados = localStorage.getItem("favoritos");
-    if (guardados) {
+    const fetchFavoritos = async () => {
       try {
-        const parseados = JSON.parse(guardados);
-        setFavoritos(parseados);
-      } catch (e) {
-        console.error("Error al parsear favoritos:", e);
+        const res = await api.get("/favoritos", {
+          headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        setFavoritos(res.data);
+      } catch (error) {
+        console.error("Error al cargar favoritos:", error);
       }
-    }
-  }, []);
+    };
 
-  const eliminarFavorito = (nombre) => {
-    const nuevosFavoritos = favoritos.filter((j) => j.player_name !== nombre);
-    setFavoritos(nuevosFavoritos);
-    localStorage.setItem("favoritos", JSON.stringify(nuevosFavoritos));
+    if (auth?.token) {
+      fetchFavoritos();
+    }
+  }, [auth?.token, refreshFavorites]);
+
+  const eliminarFavorito = async (nombre, sala) => {
+    try {
+      await api.delete(`/favoritos/${sala}/${encodeURIComponent(nombre)}`, {
+        headers: { Authorization: `Bearer ${auth?.token}` },
+      });
+      setRefreshFavorites((prev) => prev + 1);
+    } catch (error) {
+      console.error("Error al eliminar favorito:", error);
+    }
   };
 
   const cargarDatos = useCallback(async () => {
     const resultados = {};
     for (const favorito of favoritos) {
       try {
-        const res = await api.get(`/jugador/XPK/${encodeURIComponent(favorito.player_name)}`);
+        const res = await api.get(
+          `/jugador/${favorito.sala}/${encodeURIComponent(favorito.player_name)}`
+        );
         resultados[favorito.player_name] = res.data;
       } catch (error) {
         console.error(`Error cargando datos de ${favorito.player_name}:`, error);
@@ -82,6 +94,16 @@ const Favoritos = () => {
       [nombre]: !prev[nombre],
     }));
   };
+
+  if (!auth?.token) return <Spinner size="xl" mt={8} />;
+
+  if (favoritos.length === 0 && Object.keys(datos).length === 0) {
+    return (
+      <Box p={8}>
+        <Heading size="md">🔄 Cargando favoritos...</Heading>
+      </Box>
+    );
+  }
 
   if (!favoritos.length) {
     return (
@@ -110,7 +132,7 @@ const Favoritos = () => {
                 </Flex>
                 <Box
                   cursor="pointer"
-                  onClick={() => eliminarFavorito(jugador.player_name)}
+                  onClick={() => eliminarFavorito(jugador.player_name, jugador.sala)}
                   _hover={{ transform: "scale(1.1)" }}
                 >
                   <FaTrash color="red" />

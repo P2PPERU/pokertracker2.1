@@ -6,13 +6,12 @@ import {
   Text,
   Spinner,
   Grid,
-  GridItem,
+  List,
+  ListItem,
   Badge,
   Input,
   Button,
   Flex,
-  List,
-  ListItem,
   Select,
   useClipboard,
   useToast,
@@ -36,8 +35,9 @@ import {
   FaExclamationTriangle,
   FaMedal,
   FaSearch,
-  FaStar, // 👈 Importa el ícono de estrella
+  FaStar,
 } from "react-icons/fa";
+import { Link } from 'react-router-dom'; // <-- Asegúrate de importar Link
 import api from '../services/api';
 import GraficoGanancias from '../components/GraficoGanancias';
 import AnalisisJugador from '../components/AnalisisJugador';
@@ -77,23 +77,38 @@ const Dashboard = () => {
   const [statsText, setStatsText] = useState("");
   const toast = useToast();
 
-  // Nuevo estado local para favoritos
-  const [favoritos, setFavoritos] = useState(() => {
-    const guardados = localStorage.getItem("favoritos");
-    return guardados ? JSON.parse(guardados) : [];
-  });
+  // Estados para favoritos
+  const [esFavorito, setEsFavorito] = useState(false);
+  const [favoritos, setFavoritos] = useState([]);
 
-  const esFavorito = jugador && favoritos.some(fav => fav.player_name === jugador.player_name);
+  // Verifica si el jugador ya es favorito
+  
 
-  const toggleFavorito = () => {
+  // Alternar favorito (agregar o eliminar en el backend)
+  const toggleFavorito = async () => {
     if (!jugador) return;
-
-    const nuevosFavoritos = esFavorito
-      ? favoritos.filter(fav => fav.player_name !== jugador.player_name)
-      : [...favoritos, jugador];
-
-    setFavoritos(nuevosFavoritos);
-    localStorage.setItem("favoritos", JSON.stringify(nuevosFavoritos));
+  
+    try {
+      if (esFavorito) {
+        // Eliminar favorito
+        await api.delete(`/favoritos/${salaSeleccionada}/${encodeURIComponent(jugador.player_name)}`, {
+          headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        setEsFavorito(false);
+        setFavoritos((prev) => prev.filter((fav) => fav.player_name !== jugador.player_name));
+      } else {
+        // Agregar favorito
+        await api.post(
+          "/favoritos",
+          { player_name: jugador.player_name, sala: salaSeleccionada },
+          { headers: { Authorization: `Bearer ${auth?.token}` } }
+        );
+        setEsFavorito(true);
+        setFavoritos((prev) => [...prev, { player_name: jugador.player_name, sala: salaSeleccionada }]);
+      }
+    } catch (error) {
+      console.error("Error al actualizar favoritos:", error);
+    }
   };
 
   // Función para obtener sugerencias (se memoriza para usar en el debounce)
@@ -123,25 +138,66 @@ const Dashboard = () => {
     debouncedFetchSugerencias(e.target.value);
   }, [debouncedFetchSugerencias]);
 
-  // Función para buscar jugador (memoriza con useCallback)
+  // Función para buscar jugador
   const buscarJugador = useCallback(async (nombre) => {
     setLoading(true);
     setSugerencias([]);
     setSelectedStats({});
     try {
       const res = await api.get(`/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}`);
-      setJugador(res.data);
+      const jugadorData = res.data;
+      setJugador(jugadorData);
+  
+      // 🔥 Paso C: Verificar si es favorito al buscar
+      if (auth?.token) {
+        try {
+          const resFavorito = await api.get(
+            `/favoritos/${salaSeleccionada}/${encodeURIComponent(jugadorData.player_name)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${auth.token}`,
+              },
+            }
+          );
+          setEsFavorito(resFavorito.data.favorito);
+        } catch (error) {
+          setEsFavorito(false); // si da error, asume que no es favorito
+          console.error("Error al verificar favorito (post búsqueda):", error);
+        }
+      }
+  
     } catch (error) {
       console.error("Jugador no encontrado:", error);
       setJugador(null);
+      setEsFavorito(false);
     }
     setLoading(false);
-  }, [salaSeleccionada]);
+  }, [salaSeleccionada, auth?.token]);
+  
 
   // Buscar jugador predeterminado al montar
+  // Buscar jugador predeterminado al montar
+useEffect(() => {
+  buscarJugador("ABCPK0206");
+}, [buscarJugador]);
+
+
   useEffect(() => {
-    buscarJugador("ABCPK0206");
-  }, [buscarJugador]);
+    const fetchFavoritos = async () => {
+      try {
+        const res = await api.get("/favoritos", {
+          headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        setFavoritos(res.data); // [{ player_name, sala }]
+      } catch (error) {
+        console.error("Error al cargar favoritos:", error);
+      }
+    };
+
+    if (auth?.token) {
+      fetchFavoritos();
+    }
+  }, [auth?.token]);
 
   // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
@@ -267,15 +323,23 @@ const Dashboard = () => {
   return (
     <Box minH="100vh" bg="#DCE2E8" p={4}>
       <Box maxW="1200px" mx="auto" p={6} bg={cardBg} rounded="lg" boxShadow="xl">
+        {/* Encabezado con botón para cambiar color y ver favoritos */}
         <Flex alignItems="center" justifyContent="space-between" mb={4}>
           <Heading size="lg">🔍 Estadísticas</Heading>
-          <IconButton
-            aria-label="Toggle Color Mode"
-            icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-            onClick={toggleColorMode}
-            variant="ghost"
-            color={iconButtonColor}
-          />
+          <Flex gap={2}>
+            <Link to="/favoritos">
+              <Button variant="outline" colorScheme="blue">
+                Favoritos
+              </Button>
+            </Link>
+            <IconButton
+              aria-label="Toggle Color Mode"
+              icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+              onClick={toggleColorMode}
+              variant="ghost"
+              color={iconButtonColor}
+            />
+          </Flex>
         </Flex>
 
         <Flex gap={2} my={4} align="center">
@@ -358,11 +422,12 @@ const Dashboard = () => {
               <IconButton
                 aria-label={esFavorito ? "Eliminar de favoritos" : "Agregar a favoritos"}
                 icon={<FaStar color={esFavorito ? "gold" : "gray"} />}
-                onClick={toggleFavorito} // 👈 La estrella será interactiva
+                onClick={toggleFavorito}
                 variant="ghost"
               />
             </Flex>
 
+            {/* Resto de la UI con estadísticas y análisis */}
             <Flex gap={2} mb={4}>
               <Button
                 color="white"
@@ -385,18 +450,17 @@ const Dashboard = () => {
               </Box>
 
               <Box flex="3" minW="300px">
-  <Badge colorScheme="green" fontSize="lg" mb={2}>
-    {jugador.player_name}
-  </Badge>
-
+                <Badge colorScheme="green" fontSize="lg" mb={2}>
+                  {jugador.player_name}
+                </Badge>
                 <Grid
-                  templateColumns="repeat(6, 1fr)" // 👈 Fija 6 columnas visibles
+                  templateColumns="repeat(6, 1fr)"
                   gap={2}
-                  justifyContent="start" // 👈 Asegura que los elementos comiencen desde la izquierda
+                  justifyContent="start"
                   alignItems="center"
                   mt={4}
-                  overflowX="auto" // 👈 Habilita desplazamiento horizontal
-                  whiteSpace="nowrap" // 👈 Evita que los elementos se envuelvan
+                  overflowX="auto"
+                  whiteSpace="nowrap"
                 >
                   <StatBox
                     icon={FaHandPaper}
@@ -447,7 +511,6 @@ const Dashboard = () => {
                     onClick={() => toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)}
                     isSelected={selectedStats["Fold to 3-BET"] !== undefined}
                   />
-
                   {tieneSuscripcionAvanzada && (
                     <>
                       <StatBox
@@ -627,8 +690,8 @@ const StatBox = React.memo(({ icon: Icon, title, value, isSelected, onClick }) =
       alignItems="center"
       justifyContent="center"
       minH="90px"
-      minW="110px" // 👈 Esto asegura 6 stats por fila visibles en scroll
-      flex="none"   // 👈 Necesario para scroll horizontal
+      minW="110px"
+      flex="none"
     >
       {Icon && (
         <Box color={isSelected ? "blue.400" : iconDefaultColor} mb={1}>
@@ -644,6 +707,5 @@ const StatBox = React.memo(({ icon: Icon, title, value, isSelected, onClick }) =
     </Box>
   );
 });
-
 
 export default Dashboard;

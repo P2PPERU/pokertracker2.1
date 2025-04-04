@@ -19,8 +19,12 @@ import { useNavigate } from "react-router-dom";
 const MotionBox = motion(Box);
 
 const Home = () => {
-  const { auth } = useAuth();
-  const navigate = useNavigate();
+  const authContext = useAuth();
+  const auth = authContext?.auth;
+    const navigate = useNavigate();
+
+    console.log("AuthContext en Home:", authContext);
+
 
   const abrirModalLogin = () => {
     const event = new CustomEvent("abrir-modal-login");
