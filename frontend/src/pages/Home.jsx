@@ -30,7 +30,8 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { css } from "@emotion/react"; // Importamos emotion para estilos
+import { css } from "@emotion/react";
+import { gradients, brand } from '../theme/colors';
 
 // Definimos los estilos de animación con emotion
 const animationStyles = css`
@@ -68,7 +69,7 @@ const MotionFlex = motion(Flex);
 
 const Home = () => {
   const authContext = useAuth();
-  const auth = authContext ? authContext.auth : null; // Verificamos si authContext es nulo
+  const auth = authContext ? authContext.auth : null;
   const navigate = useNavigate();
 
   const abrirModalLogin = () => {
@@ -89,10 +90,7 @@ const Home = () => {
   const cardBg = useColorModeValue("white", "#202738");
   const headingColor = useColorModeValue("gray.900", "teal.200");
   const subTextColor = useColorModeValue("gray.600", "gray.400");
-  const cardGradient = useColorModeValue(
-    "linear(to-r, #2BB5E0, #8266D4)",
-    "linear(to-r, #2BB5E0, #8266D4)"
-  );
+  const cardGradient = gradients.main;
   const analysisBg = useColorModeValue("gray.50", "gray.800");
   const analysisTextColor = useColorModeValue("gray.800", "whiteAlpha.900");
   const imageFilter = useColorModeValue("none", "brightness(0.9)");
@@ -105,7 +103,7 @@ const Home = () => {
         <Box
           position="relative"
           minH="90vh"
-          bgImage="url('./images/hero-poker-bg.jpg')" // Cambiamos a ruta relativa
+          bgImage="url('./images/hero-poker-bg.jpg')"
           bgSize="cover"
           bgPosition="center"
           bgRepeat="no-repeat"
@@ -140,7 +138,7 @@ const Home = () => {
                   <Badge
                     px={4}
                     py={2}
-                    bgGradient="linear(to-r, teal.500, purple.500)"
+                    bgGradient={gradients.main}
                     color="white"
                     fontSize="sm"
                     fontWeight="bold"
@@ -165,7 +163,7 @@ const Home = () => {
                   <Box
                     as="span"
                     position="relative"
-                    bgGradient="linear(to-r, teal.300, blue.300, purple.400)"
+                    bgGradient={gradients.main}
                     bgClip="text"
                     sx={{
                       "&::after": {
@@ -175,7 +173,7 @@ const Home = () => {
                         left: 0,
                         width: "100%",
                         height: "2px",
-                        bgGradient: "linear(to-r, teal.300, blue.300, purple.400)"
+                        bgGradient: gradients.main
                       }
                     }}
                   >
@@ -209,19 +207,7 @@ const Home = () => {
                     px={8}
                     fontSize="md"
                     fontWeight="bold"
-                    bgGradient="linear(to-r, teal.400, blue.500, purple.600)"
-                    color="white"
-                    _hover={{
-                      bgGradient: "linear(to-r, teal.500, blue.600, purple.700)",
-                      transform: "translateY(-5px)",
-                      boxShadow: "xl"
-                    }}
-                    _active={{
-                      transform: "translateY(-2px)"
-                    }}
-                    boxShadow="0 10px 25px -5px rgba(0, 128, 128, 0.4)"
-                    borderRadius="full"
-                    transition="all 0.3s ease"
+                    variant="primary"
                     rightIcon={<Icon as={FaArrowRight} ml={1} />}
                   >
                     Comenzar Ahora
@@ -274,7 +260,7 @@ const Home = () => {
                   border="1px solid rgba(255,255,255,0.1)"
                 >
                   <Image
-                    src="./images/hero-pokertracker.png" // Cambiamos a ruta relativa
+                    src="./images/hero-pokertracker.png"
                     alt="PokerProTrack Dashboard"
                     borderRadius="xl"
                     width="full"
@@ -316,7 +302,7 @@ const Home = () => {
                   color="white"
                   fontSize="sm"
                   fontWeight="bold"
-                  bgGradient="linear(to-r, teal.400, blue.500)"
+                  bgGradient={gradients.main}
                   boxShadow="0 0 15px rgba(72, 187, 120, 0.5)"
                 >
                   <HStack spacing={2}>
@@ -349,21 +335,21 @@ const Home = () => {
                     texto: "Jugadores Analizados", 
                     desc: "Actualizado diariamente",
                     icono: FaUserAlt,
-                    color: "teal.400"
+                    color: brand.primary
                   },
                   { 
                     numero: "5M+", 
                     texto: "Manos Procesadas", 
                     desc: "En bases de datos activas",
                     icono: FaDatabase,
-                    color: "blue.400"
+                    color: brand.primary
                   },
                   { 
                     numero: "97.3%", 
                     texto: "Precisión de IA", 
                     desc: "En predicciones de estilo",
                     icono: FaBrain,
-                    color: "purple.400"
+                    color: brand.primary
                   }
                 ].map((stat, idx) => (
                   <Stat 
@@ -387,7 +373,7 @@ const Home = () => {
                     </HStack>
                     <StatNumber 
                       fontSize={{ base: "3xl", md: "4xl" }} 
-                      bgGradient={`linear(to-r, ${stat.color}, blue.300)`}
+                      bgGradient={`linear(to-r, ${stat.color}, ${brand.secondary})`}
                       bgClip="text"
                       fontWeight="extrabold"
                     >
@@ -428,7 +414,7 @@ const Home = () => {
                 textAlign="center"
                 mb={2}
                 maxW="800px"
-                bgGradient="linear(to-r, teal.400, blue.500)"
+                bgGradient={gradients.main}
                 bgClip="text"
               >
                 ¿Qué puedes lograr con POKER PRO TRACK?
@@ -465,7 +451,7 @@ const Home = () => {
                     <Heading
                       as="h3"
                       fontSize={{ base: "2xl", md: "3xl" }}
-                      bgGradient="linear(to-r, teal.400, blue.500)"
+                      bgGradient={gradients.main}
                       bgClip="text"
                       mb={4}
                     >
@@ -493,7 +479,7 @@ const Home = () => {
                           }}
                           transition="transform 0.3s ease"
                         >
-                          <Icon as={FaChartBar} color="teal.500" />
+                          <Icon as={FaChartBar} color={brand.primary} />
                           <Text fontWeight="medium">{feature}</Text>
                         </HStack>
                       ))}
@@ -503,7 +489,7 @@ const Home = () => {
                 
                 <Box position="relative" bg={useColorModeValue("gray.50", "gray.900")}>
                   <Image
-                    src="./images/graficoweb.png" // Cambiamos a ruta relativa
+                    src="./images/graficoweb.png"
                     alt="Gráfico de ganancias"
                     w="100%"
                     h="100%"
@@ -535,7 +521,7 @@ const Home = () => {
                   bg={useColorModeValue("gray.50", "gray.900")}
                 >
                   <Image
-                    src="./images/statweb.png" // Cambiamos a ruta relativa
+                    src="./images/statweb.png"
                     alt="Estadísticas del jugador"
                     w="100%"
                     h="100%"
@@ -553,7 +539,7 @@ const Home = () => {
                     <Heading
                       as="h3"
                       fontSize={{ base: "2xl", md: "3xl" }}
-                      bgGradient="linear(to-r, teal.400, blue.500)"
+                      bgGradient={gradients.main}
                       bgClip="text"
                       mb={4}
                     >
@@ -588,13 +574,13 @@ const Home = () => {
                         left: 0,
                         width: "100%",
                         height: "100%",
-                        bgGradient: "linear(to-r, teal.500, blue.500)",
+                        bgGradient: gradients.main,
                         opacity: 0.05,
                         borderRadius: "lg",
                         zIndex: 0
                       }}
                     >
-                      <Heading size="md" mb={3} color={useColorModeValue("teal.600", "teal.300")}>
+                      <Heading size="md" mb={3} color={brand.primary}>
                         🧠 Análisis IA:
                       </Heading>
                       <Text mb={2} position="relative" zIndex={1}>
@@ -611,23 +597,9 @@ const Home = () => {
                     <Button
                       mt={4}
                       size="lg"
-                      bgGradient="linear(to-r, teal.400, blue.500)"
-                      color="white"
-                      _hover={{
-                        bgGradient: "linear(to-r, teal.500, blue.600)",
-                        transform: "translateY(-5px)",
-                        boxShadow: "xl"
-                      }}
-                      _active={{
-                        bgGradient: "linear(to-r, teal.600, blue.700)",
-                        transform: "translateY(-2px)"
-                      }}
+                      variant="primary"
                       onClick={handleRedirect}
-                      borderRadius="full"
-                      px={8}
-                      py={6}
                       rightIcon={<FaArrowRight />}
-                      transition="all 0.3s ease"
                     >
                       Analiza a tus oponentes ahora
                     </Button>
@@ -723,7 +695,7 @@ const Home = () => {
                 
                 <Box position="relative" bg={useColorModeValue("gray.50", "gray.900")}>
                   <Image
-                    src="./images/GPTia.png" // Cambiamos a ruta relativa
+                    src="./images/GPTia.png"
                     alt="Análisis de manos con IA"
                     w="100%"
                     h="100%"
@@ -876,7 +848,7 @@ const Home = () => {
                     
                     <VStack spacing={4} align="center" pt={2}>
                       <Text fontSize="xl" fontWeight="bold">{testimonial.name}</Text>
-                      <Badge colorScheme="teal">{testimonial.title}</Badge>
+                      <Badge bg={brand.primary} color="white">{testimonial.title}</Badge>
                       
                       <Text 
                         fontSize="md"
@@ -917,7 +889,7 @@ const Home = () => {
               boxShadow="md"
               mt={16}
               borderTop="4px solid"
-              borderColor="teal.400"
+              borderColor={brand.primary}
             >
               <Heading size="lg" mb={5} color={headingColor}>
                 Potencia tu juego con PokerProTrack, vuelvete un ganador y encuentra las mejores mesas del mercado.
@@ -930,16 +902,7 @@ const Home = () => {
                 size="lg"
                 fontSize="md"
                 fontWeight="bold"
-                bgGradient="linear(to-r, teal.400, blue.400)"
-                color="white"
-                _hover={{
-                  bgGradient: "linear(to-r, teal.500, blue.500)",
-                  transform: "translateY(-2px)",
-                  boxShadow: "lg"
-                }}
-                _active={{
-                  transform: "translateY(-1px)"
-                }}
+                variant="primary"
                 px={8}
                 py={6}
                 borderRadius="full"

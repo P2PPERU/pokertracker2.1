@@ -19,6 +19,7 @@ import AuthModal from "./AuthModal";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import { FaChartLine, FaUsers, FaCrown, FaStar, FaUserAlt, FaSignOutAlt, FaHome } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import { gradients } from "../theme/colors"; // 👈 Importar colores del tema
 
 const Navbar = () => {
   const { auth, logout } = useAuth();
@@ -50,12 +51,10 @@ const Navbar = () => {
   }, []);
 
   const navItemColor = "white";
-  const hoverColor = "cyan.200";
+  const hoverColor = "whiteAlpha.300"; // 👈 Cambiado de cyan.200
   
-  // Configuración de transición y efecto al hacer scroll
-  const navBgGradient = scrolled 
-    ? "linear(to-r, #2483B0, #6B55B0)" 
-    : "linear(to-r, #2BB5E0, #8266D4)";
+  // 👇 Usar gradiente del tema
+  const navBgGradient = gradients.main;
     
   const navBoxShadow = scrolled 
     ? "0 4px 20px rgba(0,0,0,0.2)" 
@@ -99,7 +98,7 @@ const Navbar = () => {
 
   return (
     <Box
-      bgGradient={navBgGradient}
+      bgGradient={navBgGradient} // 👈 Usando gradiente del tema
       color="white"
       position="sticky"
       top="0"
@@ -122,7 +121,7 @@ const Navbar = () => {
           if (!isMobile) onToggle();
         }}
       >
-        {/* Logo con brillo y efecto - CORREGIDO */}
+        {/* Logo con brillo y efecto */}
         <Flex align="center">
           <Link
             as={RouterLink}
@@ -132,7 +131,6 @@ const Navbar = () => {
             alignItems="center"
           >
             <HStack spacing={2}>
-              {/* Reemplazado por un icono de emoji para evitar problemas de carga */}
               <Box 
                 fontSize={scrolled ? "xl" : "2xl"} 
                 transition="all 0.3s ease"
@@ -143,7 +141,7 @@ const Navbar = () => {
                 fontSize={logoSize} 
                 fontWeight="bold"
                 transition="all 0.3s ease"
-                bgGradient="linear(to-r, white, cyan.100)"
+                bgGradient="linear(to-r, white, whiteAlpha.800)" // 👈 Simplificado
                 bgClip="text"
                 letterSpacing="tight"
                 _hover={{ 
@@ -163,8 +161,10 @@ const Navbar = () => {
               py={0.5}
               textTransform="uppercase"
               fontWeight="bold"
-              bg="rgba(0,0,0,0.2)"
-              color="cyan.100"
+              bg="whiteAlpha.200" // 👈 Consistente con el tema
+              color="white"
+              borderWidth="1px"
+              borderColor="whiteAlpha.300"
             >
               IA
             </Badge>
@@ -194,11 +194,11 @@ const Navbar = () => {
                   variant="ghost"
                   fontSize="lg"
                   fontWeight="medium"
-                  color={isActive ? hoverColor : navItemColor}
+                  color={isActive ? "white" : navItemColor}
                   bg={isActive ? "whiteAlpha.200" : "transparent"}
                   _hover={{ 
-                    color: hoverColor, 
-                    bg: "whiteAlpha.200",
+                    color: "white", 
+                    bg: hoverColor,
                     transform: "translateY(-2px)",
                     boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
                   }}
@@ -215,7 +215,7 @@ const Navbar = () => {
                       left="0" 
                       right="0" 
                       height="2px" 
-                      bg="cyan.200"
+                      bg="white" // 👈 Cambiado de cyan.200
                       borderRadius="full"
                     />
                   )}
@@ -250,7 +250,7 @@ const Navbar = () => {
               color={navItemColor}
               bg="whiteAlpha.200"
               _hover={{ 
-                color: hoverColor, 
+                color: "white", 
                 bg: "whiteAlpha.300",
                 transform: "translateY(-2px)",
                 boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
@@ -266,10 +266,10 @@ const Navbar = () => {
         </Flex>
       </Flex>
 
-      {/* Menú colapsable en móvil - Sin cambios */}
+      {/* Menú colapsable en móvil */}
       <Collapse in={isOpen} animateOpacity>
         <Stack
-          bgGradient="linear(to-r, #2BB5E0, #8266D4)"
+          bgGradient={navBgGradient} // 👈 Usando gradiente del tema
           p={4}
           display={{ md: "none" }}
         >
@@ -281,7 +281,7 @@ const Navbar = () => {
                 fontSize="md"
                 fontWeight="medium"
                 color={navItemColor}
-                _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+                _hover={{ color: "white", bg: hoverColor }}
               >
                 {link.label}
               </Button>
@@ -310,7 +310,7 @@ const Navbar = () => {
               fontSize="md"
               fontWeight="medium"
               color={navItemColor}
-              _hover={{ color: hoverColor, bg: "whiteAlpha.200" }}
+              _hover={{ color: "white", bg: hoverColor }}
               onClick={openModal}
             >
               Ingresar
