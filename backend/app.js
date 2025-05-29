@@ -8,6 +8,7 @@ const jugadorRoutes = require("./routes/jugadorRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const favoritesRoutes = require("./routes/favoritesRoutes"); // <-- Importar favoritesRoutes
+const manosRoutes = require("./routes/manosRoutes"); // <-- Importar manosRoutes
 
 const app = express();
 
@@ -26,8 +27,9 @@ app.get("/", (req, res) => {
 
 // 📌 Otras rutas
 app.use("/api/favoritos", favoritesRoutes)
+app.use("/api/manos", manosRoutes) // <-- ✅ AGREGAR ESTA LÍNEA
 app.use("/api", jugadorRoutes);
-app.use("/api/admin", adminRoutes); // <-- Montar la ruta de favoritos
+app.use("/api/admin", adminRoutes);
 
 // 🚀 Puerto del servidor
 const PORT = process.env.PORT || 3000;

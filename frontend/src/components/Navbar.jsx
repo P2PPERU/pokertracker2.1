@@ -17,7 +17,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthModal from "./AuthModal";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
-import { FaChartLine, FaUsers, FaCrown, FaStar, FaUserAlt, FaSignOutAlt, FaHome } from "react-icons/fa";
+import { FaChartLine, FaUsers, FaCrown, FaStar, FaUserAlt, FaSignOutAlt, FaHome, FaFileAlt } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import { gradients } from "../theme/colors"; // 👈 Importar colores del tema
 
@@ -69,6 +69,7 @@ const Navbar = () => {
       case "/": return FaHome;
       case "/dashboard": return FaChartLine;
       case "/top-jugadores": return FaUsers;
+      case "/analisis-manos": return FaFileAlt;
       case "/suscripciones": return FaCrown;
       case "/favoritos": return FaStar;
       case "/perfil": return FaUserAlt;
@@ -81,6 +82,7 @@ const Navbar = () => {
     { to: "/", label: "Inicio", always: true },
     { to: "/dashboard", label: "Generador EV", authOnly: true },
     { to: "/top-jugadores", label: "Top Jugadores", always: true },
+    { to: "/analisis-manos", label: "Análisis de Manos", vipOnly: true },
     { to: "/suscripciones", label: "Suscripciones", always: true },
     { to: "/favoritos", label: "Favoritos", authOnly: true },
     { to: "/perfil", label: "Mi Perfil", authOnly: true },
@@ -92,6 +94,7 @@ const Navbar = () => {
   const filteredLinks = links.filter((link) => {
     if (link.always) return true;
     if (link.authOnly && auth) return true;
+    if (link.vipOnly && auth && ["plata", "oro"].includes(auth.suscripcion)) return true;
     if (link.adminOnly && auth?.rol === "admin") return true;
     return false;
   });

@@ -20,6 +20,8 @@ const Perfil = lazy(() => import('./pages/Perfil'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 // Importa la página de Favoritos
 const Favoritos = lazy(() => import('./pages/Favoritos'));
+// Importa la página de Análisis de Manos
+const AnalisisManos = lazy(() => import('./pages/AnalisisManos'));
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -53,6 +55,11 @@ function App() {
               <Route path="/perfil" element={<Perfil />} />
               {/* Se agrega la ruta para Favoritos */}
               <Route path="/favoritos" element={<Favoritos />} />
+            </Route>
+
+            {/* 🔒 Solo usuarios VIP (plata y oro) para análisis de manos */}
+            <Route element={<PrivateRoute suscripciones={["plata", "oro"]} />}>
+              <Route path="/analisis-manos" element={<AnalisisManos />} />
             </Route>
 
             {/* 🔒 Solo accesible para rol "admin" */}
