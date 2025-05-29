@@ -8,11 +8,14 @@ import {
   Badge,
   useColorModeValue,
   Icon,
-  useToast
+  useToast,
+  Flex,
+  HStack
 } from "@chakra-ui/react";
-import { FaGem, FaMedal, FaStar, FaCheckCircle } from "react-icons/fa";
+import { FaGem, FaMedal, FaStar, FaCheckCircle, FaDatabase } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
-// Lista de planes - exactamente como en el original
+// Lista de planes
 const planes = [
   {
     nombre: "Bronce",
@@ -65,11 +68,14 @@ const planes = [
 const Suscripciones = () => {
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.700", "whiteAlpha.900");
+  const pageBg = useColorModeValue("#F5F8FC", "gray.900");
+  const subtextColor = useColorModeValue("gray.600", "gray.400");
   const toast = useToast();
-  const headerColor = useColorModeValue("teal.600", "teal.300");
-  const headerBgGradient = useColorModeValue(
-    "linear(to-r, teal.400, teal.600)", 
-    "linear(to-r, teal.500, teal.300)"
+  
+  // Actualizar a la paleta azul
+  const mainGradient = useColorModeValue(
+    "linear(to-r, #6CB5FE, #4066ED)", 
+    "linear(to-r, #6CB5FE, #4066ED)"
   );
 
   const generarLinkWhatsApp = (plan) => {
@@ -88,182 +94,204 @@ const Suscripciones = () => {
   };
 
   return (
-    <Box px={[4, 8]} py={[10, 16]} maxW="1200px" mx="auto">
-      {/* Encabezado mejorado pero conservando estructura */}
-      <Heading 
-        textAlign="center" 
-        mb={4} 
-        bgGradient={headerBgGradient}
-        bgClip="text"
-        fontSize={["3xl", "4xl"]}
-        fontWeight="bold"
-        letterSpacing="tight"
-      >
-        Planes de Suscripción
-      </Heading>
-      <Text 
-        textAlign="center" 
-        mb={10} 
-        fontSize={["md", "lg"]} 
-        color={textColor} 
-        maxW="800px" 
-        mx="auto"
-        lineHeight="tall"
-      >
-        Conviértete en un jugador EV+ accediendo a herramientas exclusivas de análisis, gráficas avanzadas y sugerencias en tiempo real. ¡Elige el plan que potencia tu rendimiento!
-      </Text>
-
-      {/* Estructura de Grid exactamente igual al original */}
-      <SimpleGrid columns={[1, 1, 3]} spacing={10} alignItems="stretch">
-        {planes.map((plan) => (
-          <Box
-            key={plan.nombre}
-            p={8}
-            bg={cardBg}
-            borderRadius="2xl"
-            boxShadow={plan.destacado ? "xl" : "lg"}
-            border={plan.destacado ? "2px solid" : "1px solid"}
-            borderColor={plan.destacado ? "teal.500" : useColorModeValue("gray.200", "gray.600")}
-            transition="all 0.3s"
-            _hover={{ 
-              transform: "scale(1.03)",
-              boxShadow: "2xl"
-            }}
-            display="flex"
-            flexDirection="column"
-            justifyContent="space-between"
-            position="relative"
-          >
-            {/* Mantenemos exactamente la misma estructura */}
-            <Stack spacing={5} align="center">
-              {/* Icono mejorado */}
-              <Box 
-                bg={useColorModeValue(`${plan.color.split('.')[0]}.50`, `${plan.color.split('.')[0]}.900`)}
-                p={4}
-                borderRadius="full"
-                boxShadow="sm"
+    <Box minH="100vh" bg={pageBg} p={4}>
+      <Box maxW="1400px" mx="auto">
+        {/* Header en estilo consistente */}
+        <Box 
+          bgGradient={mainGradient}
+          borderRadius="xl" 
+          py={4} 
+          px={6} 
+          mb={6}
+          boxShadow="lg"
+          maxW="900px"
+          mx="auto"
+        >
+          <Flex justifyContent="space-between" alignItems="center">
+            <HStack>
+              <Icon as={FaDatabase} color="white" boxSize={5} />
+              <Heading size="lg" color="white" fontWeight="bold">
+                Planes de Suscripción
+              </Heading>
+            </HStack>
+            
+            <Link to="/">
+              <HStack 
+                bg="whiteAlpha.200" 
+                p={2} 
+                borderRadius="md" 
+                spacing={2} 
+                _hover={{ bg: "whiteAlpha.300" }}
               >
-                <Icon 
-                  as={plan.icono} 
-                  boxSize={12} 
-                  color={plan.color} 
-                  filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.1))"
-                />
-              </Box>
-              
-              {/* Nombre del plan */}
-              <Heading size="lg">{plan.nombre}</Heading>
-              
-              {/* Badge de recomendado mejorado */}
+                <Text color="white" fontSize="sm">Volver</Text>
+              </HStack>
+            </Link>
+          </Flex>
+          
+          <Text 
+            mt={2}
+            color="whiteAlpha.800" 
+            fontSize="sm"
+            maxW="700px"
+          >
+            Conviértete en un jugador EV+ accediendo a herramientas exclusivas de análisis, gráficas avanzadas y sugerencias en tiempo real.
+          </Text>
+        </Box>
+
+        {/* Planes de suscripción */}
+        <SimpleGrid columns={[1, 1, 3]} spacing={8} alignItems="stretch" px={[2, 4]} py={[4, 8]}>
+          {planes.map((plan) => (
+            <Box
+              key={plan.nombre}
+              p={6}
+              bg={cardBg}
+              borderRadius="xl"
+              boxShadow={plan.destacado ? "xl" : "base"}
+              border={plan.destacado ? "2px solid" : "1px solid"}
+              borderColor={plan.destacado ? "#4066ED" : useColorModeValue("gray.200", "gray.600")}
+              transition="all 0.3s"
+              _hover={{ 
+                transform: "translateY(-8px)",
+                boxShadow: "xl"
+              }}
+              display="flex"
+              flexDirection="column"
+              justifyContent="space-between"
+              position="relative"
+              overflow="hidden"
+            >
+              {/* Decoración de fondo */}
               {plan.destacado && (
-                <Badge 
-                  colorScheme="teal" 
-                  fontSize="0.9em" 
-                  px={3} 
-                  py={1} 
-                  borderRadius="md"
+                <Box 
+                  position="absolute" 
+                  top="-10%" 
+                  right="-5%" 
+                  w="200px" 
+                  h="200px" 
+                  bgGradient={mainGradient}
+                  opacity="0.05"
+                  borderRadius="full"
+                  zIndex={0}
+                />
+              )}
+              
+              <Stack spacing={5} align="center" position="relative" zIndex={1}>
+                {/* Icono */}
+                <Box 
+                  bg={useColorModeValue(`${plan.color.split('.')[0]}.50`, `${plan.color.split('.')[0]}.900`)}
+                  p={4}
+                  borderRadius="full"
                   boxShadow="sm"
                 >
-                  RECOMENDADO
-                </Badge>
-              )}
-              
-              {/* Sección de precios (misma estructura) */}
-              <Box textAlign="center">
-                {plan.precioAnterior && (
-                  <>
-                    <Text fontSize="lg" color="red.500" fontWeight="bold">
-                      Antes: <span style={{ textDecoration: "line-through", opacity: 0.8 }}>{plan.precioAnterior}</span>
-                    </Text>
-                    {plan.descuento && (
-                      <Badge 
-                        colorScheme="red" 
-                        mt={1}
-                        px={2}
-                        py={0.5}
-                        borderRadius="md"
-                        fontSize="sm"
-                      >
-                        {plan.descuento}
-                      </Badge>
-                    )}
-                  </>
-                )}
-                <Text 
-                  fontSize={["xl", "2xl"]} 
-                  fontWeight="bold"
-                  bgGradient={plan.destacado ? headerBgGradient : "none"}
-                  bgClip={plan.destacado ? "text" : "none"}
-                  mt={1}
-                >
-                  {plan.precio}
-                </Text>
-              </Box>
-              
-              {/* Beneficios (misma estructura) */}
-              <Box w="100%">
-                {plan.beneficios.map((b, idx) => (
-                  <Text 
-                    key={idx} 
-                    color={textColor} 
-                    fontSize="md" 
-                    mb={2} 
-                    display="flex" 
-                    alignItems="center"
+                  <Icon 
+                    as={plan.icono} 
+                    boxSize={12} 
+                    color={plan.color} 
+                  />
+                </Box>
+                
+                {/* Nombre del plan */}
+                <Heading size="lg">{plan.nombre}</Heading>
+                
+                {/* Badge de recomendado */}
+                {plan.destacado && (
+                  <Badge 
+                    bg="#4066ED"
+                    color="white" 
+                    fontSize="0.9em" 
+                    px={3} 
+                    py={1} 
+                    borderRadius="md"
+                    boxShadow="sm"
                   >
-                    <Icon 
-                      as={FaCheckCircle} 
-                      mr={3} 
-                      color={plan.destacado ? "teal.500" : plan.color} 
-                      boxSize={5}
-                    /> 
-                    {b}
+                    RECOMENDADO
+                  </Badge>
+                )}
+                
+                {/* Sección de precios */}
+                <Box textAlign="center">
+                  {plan.precioAnterior && (
+                    <>
+                      <Text fontSize="lg" color="red.500" fontWeight="bold">
+                        Antes: <span style={{ textDecoration: "line-through", opacity: 0.8 }}>{plan.precioAnterior}</span>
+                      </Text>
+                      {plan.descuento && (
+                        <Badge 
+                          colorScheme="red" 
+                          mt={1}
+                          px={2}
+                          py={0.5}
+                          borderRadius="md"
+                          fontSize="sm"
+                        >
+                          {plan.descuento}
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                  <Text 
+                    fontSize={["xl", "2xl"]} 
+                    fontWeight="bold"
+                    bgGradient={plan.destacado ? mainGradient : "none"}
+                    bgClip={plan.destacado ? "text" : "none"}
+                    mt={1}
+                  >
+                    {plan.precio}
                   </Text>
-                ))}
-              </Box>
-              
-              {/* Botón mejorado pero manteniendo comportamiento */}
-              {plan.nombre !== "Bronce" && (
-                <Button
-                  as="a"
-                  href={generarLinkWhatsApp(plan.nombre)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  colorScheme={plan.nombre === "Plata" ? "teal" : "yellow"}
-                  size="md"
-                  px={6}
-                  py={6}
-                  mt={2}
-                  width="100%"
-                  fontWeight="bold"
-                  _hover={{
-                    transform: "translateY(-2px)",
-                    boxShadow: "md"
-                  }}
-                  onClick={() => handleElegirPlan(plan.nombre)}
-                >
-                  ¡Elegir plan!
-                </Button>
-              )}
-            </Stack>
-            
-            {/* Si es un plan destacado, añadimos un efecto decorativo sutil */}
-            {plan.destacado && (
-              <Box
-                position="absolute"
-                top="-10px"
-                right="-10px"
-                w="80px"
-                h="80px"
-                bg="teal.500"
-                opacity="0.1"
-                borderRadius="full"
-                zIndex={0}
-              />
-            )}
-          </Box>
-        ))}
-      </SimpleGrid>
+                </Box>
+                
+                {/* Beneficios */}
+                <Box w="100%" mt={2}>
+                  {plan.beneficios.map((b, idx) => (
+                    <Text 
+                      key={idx} 
+                      color={textColor} 
+                      fontSize="md" 
+                      mb={3} 
+                      display="flex" 
+                      alignItems="center"
+                    >
+                      <Icon 
+                        as={FaCheckCircle} 
+                        mr={3} 
+                        color={plan.destacado ? "#4066ED" : plan.color} 
+                        boxSize={4}
+                      /> 
+                      {b}
+                    </Text>
+                  ))}
+                </Box>
+                
+                {/* Botón mejorado */}
+                {plan.nombre !== "Bronce" && (
+                  <Button
+                    as="a"
+                    href={generarLinkWhatsApp(plan.nombre)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    bg={plan.destacado ? "#4066ED" : plan.nombre === "Oro" ? "yellow.500" : "blue.400"}
+                    color="white"
+                    size="md"
+                    px={6}
+                    py={6}
+                    mt={4}
+                    width="100%"
+                    fontWeight="bold"
+                    _hover={{
+                      transform: "translateY(-2px)",
+                      boxShadow: "md",
+                      opacity: 0.9
+                    }}
+                    onClick={() => handleElegirPlan(plan.nombre)}
+                  >
+                    ¡Elegir plan!
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          ))}
+        </SimpleGrid>
+      </Box>
     </Box>
   );
 };
