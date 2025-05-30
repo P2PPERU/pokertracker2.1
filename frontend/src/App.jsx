@@ -49,18 +49,16 @@ function App() {
             <Route path="/suscripciones" element={<Suscripciones />} />
             <Route path="/recuperar" element={<RecuperarPassword />} />
             <Route path="/resetear" element={<ResetearPassword />} />
-            <Route path="/landing-analisis" element={<LandingAnalisisManos />} /> {/* <-- Nueva ruta pública */}
+            <Route path="/landing-analisis" element={<LandingAnalisisManos />} />
+            
+            {/* 🔥 NUEVO: Análisis de manos ahora es público */}
+            <Route path="/analisis-manos" element={<AnalisisManos />} />
 
             {/* Usuarios registrados (cualquier plan) */}
             <Route element={<PrivateRoute suscripciones={["bronce", "plata", "oro"]} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/perfil" element={<Perfil />} />
               <Route path="/favoritos" element={<Favoritos />} />
-            </Route>
-
-            {/* Solo VIP */}
-            <Route element={<PrivateRoute suscripciones={["plata", "oro"]} />}>
-              <Route path="/analisis-manos" element={<AnalisisManos />} />
             </Route>
 
             {/* Solo Admin */}

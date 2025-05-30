@@ -16,7 +16,11 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText
+  StatHelpText,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription
 } from "@chakra-ui/react";
 import { 
   FaSearch, 
@@ -26,10 +30,14 @@ import {
   FaArrowRight, 
   FaUserAlt, 
   FaDatabase, 
-  FaBrain 
+  FaBrain,
+  FaFileAlt,
+  FaWhatsapp,
+  FaFire,
+  FaCrown
 } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { css } from "@emotion/react";
 import { gradients, brand } from '../theme/colors';
 
@@ -99,6 +107,71 @@ const Home = () => {
     <>
       {/* Añadimos los estilos de animación */}
       <Box css={animationStyles}>
+        {/* 🔥 NUEVO: Banner destacado para Análisis de Manos - ARRIBA DE TODO */}
+        <Box
+          bg="linear-gradient(135deg, #FF0080, #FF8C42, #FFD700)"
+          color="white"
+          py={4}
+          position="relative"
+          overflow="hidden"
+          boxShadow="xl"
+        >
+          <Container maxW="container.xl">
+            <Flex 
+              direction={{ base: "column", md: "row" }}
+              align="center"
+              justify="space-between"
+              gap={4}
+            >
+              <HStack spacing={4}>
+                <Icon as={FaFire} boxSize={8} className="pulse-animation" />
+                <VStack align="start" spacing={1}>
+                  <HStack>
+                    <Badge bg="white" color="red.500" px={3} py={1} borderRadius="full" fontWeight="bold">
+                      🔥 NUEVO SERVICIO
+                    </Badge>
+                    <Badge bg="yellow.400" color="black" px={3} py={1} borderRadius="full" fontWeight="bold">
+                      70% DESC
+                    </Badge>
+                  </HStack>
+                  <Heading size={{ base: "md", md: "lg" }}>
+                    ¡Análisis Profesional de Manos por Expertos!
+                  </Heading>
+                  <Text fontSize={{ base: "sm", md: "md" }} opacity={0.9}>
+                    Mejora tu winrate +47% con análisis personalizados desde $19.99
+                  </Text>
+                </VStack>
+              </HStack>
+              
+              <VStack spacing={2}>
+                <Button
+                  as={Link}
+                  to="/landing-analisis"
+                  size="lg"
+                  bg="white"
+                  color="red.500"
+                  leftIcon={<FaFileAlt />}
+                  rightIcon={<FaArrowRight />}
+                  _hover={{
+                    transform: "translateY(-3px)",
+                    boxShadow: "2xl",
+                    bg: "whiteAlpha.900"
+                  }}
+                  fontWeight="bold"
+                  px={8}
+                  borderRadius="full"
+                  transition="all 0.3s"
+                >
+                  Ver Análisis de Manos
+                </Button>
+                <Text fontSize="xs" textAlign="center" opacity={0.8}>
+                  ⏰ Oferta limitada - Solo 20 cupos
+                </Text>
+              </VStack>
+            </Flex>
+          </Container>
+        </Box>
+
         {/* Hero principal mejorado */}
         <Box
           position="relative"
@@ -668,6 +741,8 @@ const Home = () => {
                     </SimpleGrid>
                     
                     <Button
+                      as={Link}
+                      to="/landing-analisis"
                       mt={4}
                       size="lg"
                       bgGradient="linear(to-r, purple.400, pink.500)"
@@ -681,14 +756,13 @@ const Home = () => {
                         bgGradient: "linear(to-r, purple.600, pink.700)",
                         transform: "translateY(-2px)"
                       }}
-                      onClick={handleRedirect}
                       borderRadius="full"
                       px={8}
                       py={6}
                       rightIcon={<FaArrowRight />}
                       transition="all 0.3s ease"
                     >
-                      Probar análisis de manos
+                      Ver Análisis de Manos
                     </Button>
                   </VStack>
                 </Box>
@@ -729,7 +803,7 @@ const Home = () => {
 
             {/* Tarjetas de servicios */}
             <SimpleGrid
-              columns={[1, 2, 3]}
+              columns={[1, 2, 4]}
               spacing={8}
               mb={16}
             >
@@ -748,6 +822,12 @@ const Home = () => {
                   icon: FaRobot, 
                   title: "Análisis con IA", 
                   desc: "Recibe informes de IA personalizados para identificar y explotar debilidades."
+                },
+                { 
+                  icon: FaFileAlt, 
+                  title: "Análisis de Manos", 
+                  desc: "Sube tus historiales y recibe análisis profesional para mejorar tu juego.",
+                  isNew: true
                 },
               ].map((feature, i) => (
                 <Box
@@ -768,7 +848,23 @@ const Home = () => {
                   flexDirection="column"
                   alignItems="center"
                   justifyContent="center"
+                  position="relative"
                 >
+                  {feature.isNew && (
+                    <Badge
+                      position="absolute"
+                      top="10px"
+                      right="10px"
+                      bg="yellow.400"
+                      color="black"
+                      fontSize="xs"
+                      px={2}
+                      py={1}
+                      borderRadius="full"
+                    >
+                      NUEVO
+                    </Badge>
+                  )}
                   <Icon 
                     as={feature.icon} 
                     w={14} 

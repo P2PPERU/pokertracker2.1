@@ -17,7 +17,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthModal from "./AuthModal";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
-import { FaChartLine, FaUsers, FaCrown, FaStar, FaUserAlt, FaSignOutAlt, FaHome, FaFileAlt } from "react-icons/fa";
+import { FaChartLine, FaUsers, FaCrown, FaStar, FaUserAlt, FaSignOutAlt, FaHome, FaFileAlt, FaFire } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import { gradients } from "../theme/colors"; // 👈 Importar colores del tema
 
@@ -70,6 +70,7 @@ const Navbar = () => {
       case "/dashboard": return FaChartLine;
       case "/top-jugadores": return FaUsers;
       case "/analisis-manos": return FaFileAlt;
+      case "/landing-analisis": return FaFire; // 🔥 Nuevo icono para la landing
       case "/suscripciones": return FaCrown;
       case "/favoritos": return FaStar;
       case "/perfil": return FaUserAlt;
@@ -82,7 +83,8 @@ const Navbar = () => {
     { to: "/", label: "Inicio", always: true },
     { to: "/dashboard", label: "Generador EV", authOnly: true },
     { to: "/top-jugadores", label: "Top Jugadores", always: true },
-    { to: "/analisis-manos", label: "Análisis de Manos", vipOnly: true },
+    { to: "/landing-analisis", label: "Análisis Manos", always: true, isNew: true }, // 🔥 NUEVO enlace público
+    { to: "/analisis-manos", label: "Mis Manos", vipOnly: true }, // Para usuarios VIP logueados
     { to: "/suscripciones", label: "Suscripciones", always: true },
     { to: "/favoritos", label: "Favoritos", authOnly: true },
     { to: "/perfil", label: "Mi Perfil", authOnly: true },
@@ -209,8 +211,26 @@ const Navbar = () => {
                   borderRadius="md"
                   px={4}
                   leftIcon={Icon && <Icon />}
+                  position="relative"
                 >
                   {link.label}
+                  {/* Badge "NUEVO" para análisis de manos */}
+                  {link.isNew && (
+                    <Badge
+                      position="absolute"
+                      top="-8px"
+                      right="-8px"
+                      bg="red.500"
+                      color="white"
+                      fontSize="0.5em"
+                      px={1.5}
+                      py={0.5}
+                      borderRadius="full"
+                      fontWeight="bold"
+                    >
+                      NUEVO
+                    </Badge>
+                  )}
                   {isActive && (
                     <Box 
                       position="absolute" 
@@ -285,8 +305,24 @@ const Navbar = () => {
                 fontWeight="medium"
                 color={navItemColor}
                 _hover={{ color: "white", bg: hoverColor }}
+                position="relative"
               >
                 {link.label}
+                {/* Badge "NUEVO" para móvil */}
+                {link.isNew && (
+                  <Badge
+                    ml={2}
+                    bg="red.500"
+                    color="white"
+                    fontSize="0.6em"
+                    px={2}
+                    py={0.5}
+                    borderRadius="full"
+                    fontWeight="bold"
+                  >
+                    NUEVO
+                  </Badge>
+                )}
               </Button>
             </Link>
           ))}

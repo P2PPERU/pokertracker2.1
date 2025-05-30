@@ -56,7 +56,9 @@ import {
   FaGift,
   FaFire,
   FaChartLine,
-  FaRocket
+  FaRocket,
+  FaLock,
+  FaCrown
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -89,12 +91,15 @@ const AnalisisManos = () => {
     combo: "https://wa.me/51991351213?text=🔥%20Hola!%20Quiero%20el%20combo%20completo:%20Premium%20+%20Clubs%20+%20Rakeback"
   };
 
-  // Verificar que el usuario tenga suscripción VIP
+  // Verificar que el usuario tenga suscripción VIP (solo para subir archivos)
   const esUsuarioVIP = auth && ["plata", "oro"].includes(auth.suscripcion);
 
-  // Cargar archivos del usuario
+  // Cargar archivos del usuario (solo si está autenticado y es VIP)
   const cargarMisArchivos = useCallback(async () => {
-    if (!esUsuarioVIP) return;
+    if (!esUsuarioVIP) {
+      setCargandoArchivos(false);
+      return;
+    }
     
     try {
       setCargandoArchivos(true);
@@ -251,546 +256,10 @@ const AnalisisManos = () => {
     }
   };
 
-  if (!auth) {
-    return (
-      <Container maxW="md" mt={10}>
-        <Alert status="warning" borderRadius="md">
-          <AlertIcon />
-          <Box>
-            <AlertTitle>Acceso restringido</AlertTitle>
-            <AlertDescription>
-              Debes iniciar sesión para acceder al análisis de manos.
-            </AlertDescription>
-          </Box>
-        </Alert>
-      </Container>
-    );
-  }
-
-  // PÁGINA PARA USUARIOS NO VIP - OPTIMIZADA PARA CONVERSIÓN
-  if (!esUsuarioVIP) {
-    return (
-      <Box minH="100vh" bg={pageBg} p={4}>
-        <Container maxW="6xl" mx="auto">
-          {/* Header */}
-          <Box 
-            bgGradient={mainGradient}
-            borderRadius="xl" 
-            py={4} 
-            px={6} 
-            mb={6}
-            boxShadow="lg"
-          >
-            <Flex justifyContent="space-between" alignItems="center">
-              <HStack>
-                <Icon as={FaRocket} color="white" boxSize={5} />
-                <Heading size="lg" color="white" fontWeight="bold">
-                  Análisis Profesional de Manos
-                </Heading>
-                <Badge bg="red.500" color="white" px={2} py={1} borderRadius="full">
-                  🔥 HOT
-                </Badge>
-              </HStack>
-              
-              <Link to="/">
-                <HStack 
-                  bg="whiteAlpha.200" 
-                  p={2} 
-                  borderRadius="md" 
-                  spacing={2} 
-                  _hover={{ bg: "whiteAlpha.300" }}
-                >
-                  <Text color="white" fontSize="sm">Volver</Text>
-                </HStack>
-              </Link>  
-            </Flex>
-          </Box>
-
-          {/* Hero Section Principal */}
-          <Card mb={8} overflow="hidden" position="relative" boxShadow="2xl">
-            <Box 
-              position="absolute" 
-              top="0" 
-              left="0" 
-              right="0" 
-              height="6px" 
-              bgGradient="linear(to-r, #FFD700, #FF6B35, #FF0080)"
-            />
-            <CardBody p={8}>
-              <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} alignItems="center">
-                <VStack align="start" spacing={6}>
-                  <HStack>
-                    <Badge 
-                      bg={goldAccent} 
-                      color="black" 
-                      px={4} 
-                      py={2} 
-                      borderRadius="full"
-                      fontSize="md"
-                      fontWeight="bold"
-                    >
-                      🏆 SERVICIO PREMIUM EXCLUSIVO
-                    </Badge>
-                    <Badge bg="red.500" color="white" px={3} py={1} borderRadius="full">
-                      LIMITADO
-                    </Badge>
-                  </HStack>
-                  
-                  <Heading size="2xl" color={textColor} lineHeight="1.1">
-                    Análisis Profesional
-                    <Text as="span" bgGradient="linear(to-r, #FF6B35, #F7931E)" bgClip="text"> 
-                      {" "}de Manos por Expertos
-                    </Text>
-                  </Heading>
-                  
-                  <Text fontSize="xl" color={subtextColor} lineHeight="1.6" fontWeight="medium">
-                    Nuestro equipo de profesionales <strong>analizará tus manos manualmente</strong> 
-                    en PokerTracker y te dará recomendaciones específicas para 
-                    <Text as="span" color="green.500" fontWeight="bold"> maximizar tus ganancias</Text>.
-                  </Text>
-
-                  {/* Stats impactantes */}
-                  <SimpleGrid columns={3} spacing={4} w="full">
-                    <Stat 
-                      textAlign="center" 
-                      p={4} 
-                      bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
-                      borderRadius="xl"
-                      color="white"
-                      boxShadow="lg"
-                    >
-                      <StatNumber fontSize="2xl">+47%</StatNumber>
-                      <StatLabel fontSize="xs">Mejora winrate</StatLabel>
-                    </Stat>
-                    <Stat 
-                      textAlign="center" 
-                      p={4} 
-                      bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" 
-                      borderRadius="xl"
-                      color="white"
-                      boxShadow="lg"
-                    >
-                      <StatNumber fontSize="2xl">24h</StatNumber>
-                      <StatLabel fontSize="xs">Tiempo entrega</StatLabel>
-                    </Stat>
-                    <Stat 
-                      textAlign="center" 
-                      p={4} 
-                      bg="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" 
-                      borderRadius="xl"
-                      color="white"
-                      boxShadow="lg"
-                    >
-                      <StatNumber fontSize="2xl">500+</StatNumber>
-                      <StatLabel fontSize="xs">Clientes felices</StatLabel>
-                    </Stat>
-                  </SimpleGrid>
-
-                  {/* CTA Principal WhatsApp - MÁS LLAMATIVO */}
-                  <VStack spacing={4} w="full">
-                    <Button
-                      as="a"
-                      href={whatsappUrls.analisis}
-                      target="_blank"
-                      size="xl"
-                      bg={whatsappGreen}
-                      color="white"
-                      leftIcon={<FaWhatsapp size="24px" />}
-                      rightIcon={<FaArrowRight />}
-                      _hover={{
-                        bg: "#1DA851",
-                        transform: "translateY(-3px)",
-                        boxShadow: "2xl"
-                      }}
-                      w="full"
-                      py={8}
-                      fontSize="xl"
-                      fontWeight="bold"
-                      borderRadius="full"
-                      boxShadow="xl"
-                      _active={{
-                        transform: "translateY(-1px)"
-                      }}
-                      transition="all 0.2s"
-                    >
-                      💬 Solicitar Análisis AHORA
-                    </Button>
-                    
-                    <HStack spacing={4} fontSize="sm" color={subtextColor}>
-                      <Text>✅ Respuesta en 5 min</Text>
-                      <Text>✅ Análisis en 24h</Text>
-                      <Text>✅ Desde $19.99</Text>
-                    </HStack>
-                  </VStack>
-                </VStack>
-
-                {/* Imagen/Testimonio */}
-                <Box position="relative">
-                  <Box 
-                    h="400px" 
-                    bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
-                    borderRadius="2xl" 
-                    display="flex" 
-                    alignItems="center" 
-                    justifyContent="center"
-                    position="relative"
-                    overflow="hidden"
-                    boxShadow="2xl"
-                  >
-                    <Icon as={FaTrophy} boxSize={24} color="white" opacity={0.3} />
-                    
-                    {/* Testimonio flotante */}
-                    <Box 
-                      position="absolute"
-                      bottom="20px"
-                      left="20px"
-                      right="20px"
-                      bg="white"
-                      p={4}
-                      borderRadius="xl"
-                      boxShadow="2xl"
-                      border="2px solid"
-                      borderColor="yellow.400"
-                    >
-                      <HStack mb={2}>
-                        {[1,2,3,4,5].map(i => (
-                          <Icon key={i} as={FaStar} color="yellow.400" boxSize={4} />
-                        ))}
-                      </HStack>
-                      <Text fontSize="sm" fontWeight="medium" mb={2}>
-                        "Mi winrate subió de 2bb/100 a 8bb/100 en NL50 después del análisis"
-                      </Text>
-                      <Text fontSize="xs" fontWeight="bold" color={brand.primary}>
-                        - Carlos M., NL50 Regular
-                      </Text>
-                    </Box>
-                  </Box>
-                </Box>
-              </SimpleGrid>
-            </CardBody>
-          </Card>
-
-          {/* Sección Clubs y Apps VIP - MEJORADA */}
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} mb={8}>
-            {/* Clubs VIP */}
-            <Card overflow="hidden" position="relative" boxShadow="xl" _hover={{ transform: "translateY(-5px)" }} transition="all 0.3s">
-              <Box 
-                position="absolute" 
-                top="0" 
-                left="0" 
-                right="0" 
-                height="5px" 
-                bg="linear-gradient(90deg, #FF6B35, #F7931E)"
-              />
-              <CardHeader pb={2}>
-                <HStack justify="space-between">
-                  <HStack>
-                    <Icon as={FaUsers} color="orange.500" boxSize={6} />
-                    <Heading size="md">Clubs VIP Exclusivos</Heading>
-                  </HStack>
-                  <Badge colorScheme="orange" px={3} py={1} borderRadius="full">
-                    🔥 HOT
-                  </Badge>
-                </HStack>
-              </CardHeader>
-              <CardBody pt={0}>
-                <VStack align="start" spacing={4}>
-                  <Text color={subtextColor} fontWeight="medium">
-                    Accede a los clubs más <strong>soft</strong> con <Text as="span" color="green.500" fontWeight="bold">rakeback hasta 65%</Text> 
-                    {" "}y mesas llenas de recreacionales.
-                  </Text>
-                  
-                  <SimpleGrid columns={2} spacing={3} w="full">
-                    <HStack>
-                      <Icon as={FaMoneyBillWave} color="green.500" />
-                      <Text fontSize="sm">Rakeback 45-65%</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaTrophy} color="gold" />
-                      <Text fontSize="sm">Freerolls VIP</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaHandshake} color="blue.500" />
-                      <Text fontSize="sm">Soporte 24/7</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaChartLine} color="purple.500" />
-                      <Text fontSize="sm">Mesas soft</Text>
-                    </HStack>
-                  </SimpleGrid>
-
-                  <Button
-                    as="a"
-                    href={whatsappUrls.clubs}
-                    target="_blank"
-                    colorScheme="orange"
-                    leftIcon={<FaWhatsapp />}
-                    rightIcon={<FaArrowRight />}
-                    w="full"
-                    py={6}
-                    fontWeight="bold"
-                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
-                  >
-                    Ver Clubs Disponibles
-                  </Button>
-                </VStack>
-              </CardBody>
-            </Card>
-
-            {/* Apps Premium */}
-            <Card overflow="hidden" position="relative" boxShadow="xl" _hover={{ transform: "translateY(-5px)" }} transition="all 0.3s">
-              <Box 
-                position="absolute" 
-                top="0" 
-                left="0" 
-                right="0" 
-                height="5px" 
-                bg="linear-gradient(90deg, #667eea, #764ba2)"
-              />
-              <CardHeader pb={2}>
-                <HStack justify="space-between">
-                  <HStack>
-                    <Icon as={FaPhoneAlt} color="purple.500" boxSize={6} />
-                    <Heading size="md">Apps Premium</Heading>
-                  </HStack>
-                  <Badge colorScheme="purple" px={3} py={1} borderRadius="full">
-                    💎 VIP
-                  </Badge>
-                </HStack>
-              </CardHeader>
-              <CardBody pt={0}>
-                <VStack align="start" spacing={4}>
-                  <Text color={subtextColor} fontWeight="medium">
-                    Las mejores apps de poker con <strong>acción garantizada 24/7</strong> 
-                    {" "}y el rake más bajo del mercado.
-                  </Text>
-                  
-                  <SimpleGrid columns={2} spacing={3} w="full">
-                    <HStack>
-                      <Icon as={FaStar} color="yellow.400" />
-                      <Text fontSize="sm">Mesas activas</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaGift} color="pink.500" />
-                      <Text fontSize="sm">Bonos VIP</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaCheckCircle} color="green.500" />
-                      <Text fontSize="sm">Retiros rápidos</Text>
-                    </HStack>
-                    <HStack>
-                      <Icon as={FaFire} color="red.500" />
-                      <Text fontSize="sm">Rake bajo</Text>
-                    </HStack>
-                  </SimpleGrid>
-
-                  <Button
-                    as="a"
-                    href={whatsappUrls.apps}
-                    target="_blank"
-                    colorScheme="purple"
-                    leftIcon={<FaWhatsapp />}
-                    rightIcon={<FaArrowRight />}
-                    w="full"
-                    py={6}
-                    fontWeight="bold"
-                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
-                  >
-                    Solicitar Acceso VIP
-                  </Button>
-                </VStack>
-              </CardBody>
-            </Card>
-          </SimpleGrid>
-
-          {/* MEGA OFERTA COMBO - NUEVA SECCIÓN */}
-          <Card 
-            bg="linear-gradient(135deg, #FF0080 0%, #FF8C42 50%, #FFD700 100%)" 
-            color="white" 
-            mb={8}
-            overflow="hidden"
-            position="relative"
-            boxShadow="2xl"
-          >
-            <Box 
-              position="absolute"
-              top="-50%"
-              right="-20%"
-              width="300px"
-              height="300px"
-              borderRadius="full"
-              bg="whiteAlpha.100"
-            />
-            <Box 
-              position="absolute"
-              bottom="-30%"
-              left="-15%"
-              width="200px"
-              height="200px"
-              borderRadius="full"
-              bg="whiteAlpha.100"
-            />
-            <CardBody p={8} position="relative">
-              <VStack spacing={6} textAlign="center">
-                <HStack justify="center" spacing={4}>
-                  <Badge bg="white" color="red.500" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
-                    🔥 OFERTA LIMITADA
-                  </Badge>
-                  <Badge bg="yellow.400" color="black" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
-                    70% DESC
-                  </Badge>
-                </HStack>
-                
-                <Heading size="2xl" textAlign="center">
-                  COMBO COMPLETO
-                  <Text>Premium + Clubs + Rakeback</Text>
-                </Heading>
-                
-                <Text fontSize="xl" opacity={0.95} maxW="2xl" mx="auto">
-                  🎯 La oferta más completa del mercado: Suscripción Premium + Acceso a Clubs VIP + Rakeback hasta 65%
-                  <Text as="span" fontWeight="bold"> ¡Y pagas solo con las ganancias del rakeback!</Text>
-                </Text>
-
-                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="full">
-                  <VStack>
-                    <Icon as={FaRocket} boxSize={8} />
-                    <Text fontWeight="bold">Análisis IA Ilimitado</Text>
-                  </VStack>
-                  <VStack>
-                    <Icon as={FaMoneyBillWave} boxSize={8} />
-                    <Text fontWeight="bold">Rakeback 65%</Text>
-                  </VStack>
-                  <VStack>
-                    <Icon as={FaUsers} boxSize={8} />
-                    <Text fontWeight="bold">Clubs Exclusivos</Text>
-                  </VStack>
-                  <VStack>
-                    <Icon as={FaHandshake} boxSize={8} />
-                    <Text fontWeight="bold">Soporte VIP</Text>
-                  </VStack>
-                </SimpleGrid>
-
-                <Box textAlign="center">
-                  <Text fontSize="xl" textDecoration="line-through" opacity={0.7}>
-                    Valor normal: $99.97/mes
-                  </Text>
-                  <Text fontSize="5xl" fontWeight="bold" lineHeight="1">
-                    $29.99/mes
-                  </Text>
-                  <Text fontSize="lg" opacity={0.9}>
-                    🎁 Se paga solo con rakeback - ¡GANANCIA NETA!
-                  </Text>
-                </Box>
-
-                <Button
-                  as="a"
-                  href={whatsappUrls.combo}
-                  target="_blank"
-                  size="xl"
-                  bg="white"
-                  color="red.500"
-                  leftIcon={<FaWhatsapp size="24px" />}
-                  rightIcon={<FaArrowRight />}
-                  _hover={{
-                    bg: "whiteAlpha.900",
-                    transform: "translateY(-3px)",
-                    boxShadow: "2xl"
-                  }}
-                  py={8}
-                  px={12}
-                  fontSize="xl"
-                  fontWeight="bold"
-                  borderRadius="full"
-                >
-                  🔥 ACTIVAR COMBO AHORA
-                </Button>
-
-                <Text fontSize="sm" opacity={0.8}>
-                  ⏰ Oferta válida solo por tiempo limitado - Solo 20 cupos disponibles
-                </Text>
-              </VStack>
-            </CardBody>
-          </Card>
-
-          {/* Call to Action Final */}
-          <Card textAlign="center" p={8} boxShadow="xl">
-            <CardBody>
-              <VStack spacing={6}>
-                <Icon as={FaWhatsapp} boxSize={20} color={whatsappGreen} />
-                
-                <Heading size="xl" color={textColor}>
-                  ¿Listo para ser un jugador EV+?
-                </Heading>
-                
-                <Text color={subtextColor} maxW="lg" mx="auto" fontSize="lg">
-                  Únete a <strong>cientos de jugadores</strong> que ya están ganando más con nuestro sistema completo.
-                  <Text color="green.500" fontWeight="bold">¡El 87% de nuestros clientes mejora su winrate en 30 días!</Text>
-                </Text>
-
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} w="full" maxW="4xl">
-                  <Button
-                    as="a"
-                    href={whatsappUrls.analisis}
-                    target="_blank"
-                    size="lg"
-                    colorScheme="green"
-                    leftIcon={<FaWhatsapp />}
-                    py={6}
-                  >
-                    Análisis de Manos
-                  </Button>
-                  
-                  <Button
-                    as="a"
-                    href={whatsappUrls.clubs}
-                    target="_blank"
-                    size="lg"
-                    colorScheme="orange"
-                    leftIcon={<FaWhatsapp />}
-                    py={6}
-                  >
-                    Clubs VIP
-                  </Button>
-                  
-                  <Button
-                    as="a"
-                    href={whatsappUrls.combo}
-                    target="_blank"
-                    size="lg"
-                    bg="linear-gradient(135deg, #FF0080, #FF8C42)"
-                    color="white"
-                    leftIcon={<FaWhatsapp />}
-                    py={6}
-                    _hover={{
-                      transform: "translateY(-2px)",
-                      boxShadow: "xl"
-                    }}
-                  >
-                    Combo Completo 🔥
-                  </Button>
-                </SimpleGrid>
-
-                <VStack spacing={2}>
-                  <Text fontSize="lg" fontWeight="bold" color={whatsappGreen}>
-                    📱 +51 991 351 213
-                  </Text>
-                  <Text fontSize="sm" color={subtextColor}>
-                    ✅ Respuesta en menos de 5 minutos • 🎯 Atención personalizada
-                  </Text>
-                </VStack>
-              </VStack>
-            </CardBody>
-          </Card>
-        </Container>
-      </Box>
-    );
-  }
-
-  // RESTO DEL CÓDIGO PARA USUARIOS VIP (sin cambios mayores)
   return (
     <Box minH="100vh" bg={pageBg} p={4}>
       <Container maxW="6xl" mx="auto">
-        {/* Header para usuarios VIP */}
+        {/* Header */}
         <Box 
           bgGradient={mainGradient}
           borderRadius="xl" 
@@ -805,7 +274,9 @@ const AnalisisManos = () => {
               <Heading size="lg" color="white" fontWeight="bold">
                 Análisis de Manos
               </Heading>
-              <Badge bg="whiteAlpha.200" color="white">VIP ACTIVO</Badge>
+              {esUsuarioVIP && (
+                <Badge bg="whiteAlpha.200" color="white">VIP ACTIVO</Badge>
+              )}
             </HStack>
             
             <Link to="/">
@@ -826,190 +297,415 @@ const AnalisisManos = () => {
             color="whiteAlpha.800" 
             fontSize="sm"
           >
-            Sube tus archivos de manos y recibe análisis profesional personalizado
+            {esUsuarioVIP 
+              ? "Sube tus archivos de manos y recibe análisis profesional personalizado"
+              : "Descubre nuestro servicio de análisis profesional de manos"
+            }
           </Text>
         </Box>
 
-        <Flex direction={{ base: "column", lg: "row" }} gap={6}>
-          {/* Panel izquierdo - Subir archivo */}
-          <Box flex="1">
-            <Card>
-              <CardHeader>
-                <Heading size="md" color={textColor}>
-                  <Icon as={FaUpload} mr={2} />
-                  Subir Nuevo Archivo
-                </Heading>
-              </CardHeader>
+        {/* Mostrar contenido según el estado del usuario */}
+        {!auth ? (
+          // Usuario no autenticado - mostrar página promocional
+          <VStack spacing={8}>
+            <Alert status="info" borderRadius="md">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>¡Bienvenido al Análisis de Manos!</AlertTitle>
+                <AlertDescription>
+                  Para subir archivos y acceder a tus análisis personalizados, necesitas una cuenta VIP.
+                </AlertDescription>
+              </Box>
+            </Alert>
+
+            {/* CTA para registro */}
+            <Card textAlign="center" p={8} boxShadow="xl">
               <CardBody>
-                <VStack spacing={4} align="stretch">
-                  <Alert status="info" borderRadius="md">
-                    <AlertIcon />
-                    <Box fontSize="sm">
-                      <Text fontWeight="bold">Formatos aceptados:</Text>
-                      <Text>.txt, .log, .hh, .xml (máximo 5MB)</Text>
-                    </Box>
-                  </Alert>
+                <VStack spacing={6}>
+                  <Icon as={FaRocket} boxSize={20} color={brand.primary} />
                   
-                  <Input
-                    id="file-input"
-                    type="file"
-                    accept=".txt,.log,.hh,.xml"
-                    onChange={handleFileSelect}
-                    disabled={subiendo}
-                  />
+                  <Heading size="xl" color={textColor}>
+                    ¿Listo para mejorar tu juego?
+                  </Heading>
                   
-                  {archivo && (
-                    <Box 
-                      p={3} 
-                      bg={useColorModeValue("gray.50", "gray.700")} 
-                      borderRadius="md"
-                    >
-                      <HStack>
-                        <Icon as={FaFileAlt} color={brand.primary} />
-                        <VStack align="start" spacing={0} flex="1">
-                          <Text fontSize="sm" fontWeight="bold">
-                            {archivo.name}
-                          </Text>
-                          <Text fontSize="xs" color={subtextColor}>
-                            {(archivo.size / 1024).toFixed(1)} KB
-                          </Text>
-                        </VStack>
-                      </HStack>
-                    </Box>
-                  )}
-                  
+                  <Text color={subtextColor} maxW="lg" mx="auto" fontSize="lg">
+                    Regístrate y accede a análisis profesionales que han ayudado a 
+                    <Text as="span" color="green.500" fontWeight="bold"> cientos de jugadores a mejorar su winrate</Text>.
+                  </Text>
+
                   <Button
-                    colorScheme="blue"
                     size="lg"
-                    onClick={subirArchivo}
-                    isLoading={subiendo}
-                    loadingText="Subiendo..."
-                    disabled={!archivo || subiendo}
-                    leftIcon={<FaUpload />}
+                    variant="primary"
+                    onClick={() => {
+                      const event = new CustomEvent("abrir-modal-login");
+                      window.dispatchEvent(event);
+                    }}
+                    rightIcon={<FaArrowRight />}
                   >
-                    Subir para Análisis
+                    Registrarse Ahora
                   </Button>
-                  
-                  <Alert status="warning" borderRadius="md">
-                    <AlertIcon />
-                    <Box fontSize="sm">
-                      <AlertTitle fontSize="sm">Proceso de análisis:</AlertTitle>
-                      <AlertDescription>
-                        Tu archivo será analizado manualmente por nuestro equipo en PokerTracker. 
-                        El tiempo estimado es de 24-48 horas.
-                      </AlertDescription>
-                    </Box>
-                  </Alert>
                 </VStack>
               </CardBody>
             </Card>
-
-            {/* CTA para más servicios - Solo para usuarios VIP */}
-            <Card mt={6} bg="linear-gradient(135deg, #FF6B35, #F7931E)" color="white">
-              <CardBody p={6}>
-                <VStack spacing={4}>
-                  <Icon as={FaGift} boxSize={8} />
-                  <Heading size="md" textAlign="center">
-                    ¿Quieres maximizar tus ganancias aún más?
+          </VStack>
+        ) : (
+          // Usuarios autenticados (TODOS pueden ver la interfaz, pero solo VIP pueden subir)
+          <Flex direction={{ base: "column", lg: "row" }} gap={6}>
+            {/* Panel izquierdo - Subir archivo */}
+            <Box flex="1">
+              <Card>
+                <CardHeader>
+                  <Heading size="md" color={textColor}>
+                    <Icon as={FaUpload} mr={2} />
+                    Subir Nuevo Archivo
+                    {!esUsuarioVIP && (
+                      <Badge ml={2} colorScheme="red" fontSize="xs">
+                        REQUIERE VIP
+                      </Badge>
+                    )}
                   </Heading>
-                  <Text textAlign="center" fontSize="sm">
-                    Accede a clubs VIP con rakeback hasta 65% y paga tu premium con las comisiones.
-                  </Text>
+                </CardHeader>
+                <CardBody>
+                  <VStack spacing={4} align="stretch">
+                    {/* Mostrar alerta para usuarios bronce */}
+                    {!esUsuarioVIP && (
+                      <Alert status="warning" borderRadius="md">
+                        <AlertIcon />
+                        <Box fontSize="sm">
+                          <AlertTitle fontSize="sm">Suscripción VIP requerida</AlertTitle>
+                          <AlertDescription>
+                            Para subir archivos y recibir análisis profesionales, necesitas una suscripción Plata u Oro.
+                          </AlertDescription>
+                        </Box>
+                      </Alert>
+                    )}
+                    
+                    <Alert status="info" borderRadius="md">
+                      <AlertIcon />
+                      <Box fontSize="sm">
+                        <Text fontWeight="bold">Formatos aceptados:</Text>
+                        <Text>.txt, .log, .hh, .xml (máximo 5MB)</Text>
+                      </Box>
+                    </Alert>
+                    
+                    <Input
+                      id="file-input"
+                      type="file"
+                      accept=".txt,.log,.hh,.xml"
+                      onChange={handleFileSelect}
+                      disabled={subiendo || !esUsuarioVIP}
+                      opacity={!esUsuarioVIP ? 0.6 : 1}
+                    />
+                    
+                    {archivo && esUsuarioVIP && (
+                      <Box 
+                        p={3} 
+                        bg={useColorModeValue("gray.50", "gray.700")} 
+                        borderRadius="md"
+                      >
+                        <HStack>
+                          <Icon as={FaFileAlt} color={brand.primary} />
+                          <VStack align="start" spacing={0} flex="1">
+                            <Text fontSize="sm" fontWeight="bold">
+                              {archivo.name}
+                            </Text>
+                            <Text fontSize="xs" color={subtextColor}>
+                              {(archivo.size / 1024).toFixed(1)} KB
+                            </Text>
+                          </VStack>
+                        </HStack>
+                      </Box>
+                    )}
+                    
+                    {esUsuarioVIP ? (
+                      <Button
+                        colorScheme="blue"
+                        size="lg"
+                        onClick={subirArchivo}
+                        isLoading={subiendo}
+                        loadingText="Subiendo..."
+                        disabled={!archivo || subiendo}
+                        leftIcon={<FaUpload />}
+                      >
+                        Subir para Análisis
+                      </Button>
+                    ) : (
+                      <Button
+                        size="lg"
+                        colorScheme="blue"
+                        disabled
+                        leftIcon={<FaLock />}
+                        opacity={0.6}
+                      >
+                        Subir para Análisis (VIP)
+                      </Button>
+                    )}
+                    
+                    <Alert status={esUsuarioVIP ? "warning" : "info"} borderRadius="md">
+                      <AlertIcon />
+                      <Box fontSize="sm">
+                        <AlertTitle fontSize="sm">
+                          {esUsuarioVIP ? "Proceso de análisis:" : "¿Cómo funciona?"}
+                        </AlertTitle>
+                        <AlertDescription>
+                          {esUsuarioVIP 
+                            ? "Tu archivo será analizado manualmente por nuestro equipo en PokerTracker. El tiempo estimado es de 24-48 horas."
+                            : "Con una suscripción VIP, nuestro equipo analizará tus manos manualmente y te dará recomendaciones específicas para mejorar."
+                          }
+                        </AlertDescription>
+                      </Box>
+                    </Alert>
+                    
+                    {/* CTA para upgrade si es bronce */}
+                    {!esUsuarioVIP && (
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                        <Button
+                          as={Link}
+                          to="/suscripciones"
+                          colorScheme="blue"
+                          leftIcon={<FaCrown />}
+                          size="sm"
+                        >
+                          Ver Planes VIP
+                        </Button>
+                        
+                        <Button
+                          as="a"
+                          href={whatsappUrls.premium}
+                          target="_blank"
+                          colorScheme="green"
+                          leftIcon={<FaWhatsapp />}
+                          size="sm"
+                        >
+                          Contactar por WhatsApp
+                        </Button>
+                      </SimpleGrid>
+                    )}
+                  </VStack>
+                </CardBody>
+              </Card>
+
+              {/* CTA para más servicios */}
+              <Card mt={6} bg="linear-gradient(135deg, #FF6B35, #F7931E)" color="white">
+                <CardBody p={6}>
+                  <VStack spacing={4}>
+                    <Icon as={FaGift} boxSize={8} />
+                    <Heading size="md" textAlign="center">
+                      {esUsuarioVIP 
+                        ? "¿Quieres maximizar tus ganancias aún más?"
+                        : "¡Aprovecha nuestra oferta completa!"
+                      }
+                    </Heading>
+                    <Text textAlign="center" fontSize="sm">
+                      {esUsuarioVIP
+                        ? "Accede a clubs VIP con rakeback hasta 55% y paga tu premium con las comisiones."
+                        : "Suscripción VIP + Clubs VIP + Rakeback hasta 55%. ¡Se paga solo!"
+                      }
+                    </Text>
+                    <Button
+                      as="a"
+                      href={esUsuarioVIP ? whatsappUrls.clubs : whatsappUrls.combo}
+                      target="_blank"
+                      bg="white"
+                      color="orange.500"
+                      leftIcon={<FaWhatsapp />}
+                      _hover={{ bg: "whiteAlpha.900" }}
+                    >
+                      {esUsuarioVIP ? "Ver Clubs Disponibles" : "Ver Oferta Completa"}
+                    </Button>
+                  </VStack>
+                </CardBody>
+              </Card>
+            </Box>
+
+            {/* Panel derecho - Mis archivos */}
+            <Box flex="2">
+              <Card>
+                <CardHeader>
+                  <Heading size="md" color={textColor}>
+                    <Icon as={FaFileAlt} mr={2} />
+                    Mis Archivos Subidos
+                    {!esUsuarioVIP && (
+                      <Badge ml={2} colorScheme="orange" fontSize="xs">
+                        DISPONIBLE CON VIP
+                      </Badge>
+                    )}
+                  </Heading>
+                </CardHeader>
+                <CardBody>
+                  {!esUsuarioVIP ? (
+                    // Vista para usuarios bronce
+                    <Box textAlign="center" py={8}>
+                      <Icon as={FaLock} boxSize={16} color="gray.400" mb={4} />
+                      <Heading size="md" color={textColor} mb={4}>
+                        Funcionalidad VIP
+                      </Heading>
+                      <Text color={subtextColor} mb={6} maxW="md" mx="auto">
+                        Con una suscripción VIP podrás subir archivos, ver tu historial de análisis 
+                        y acceder a recomendaciones profesionales personalizadas.
+                      </Text>
+                      
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} maxW="sm" mx="auto">
+                        <Button
+                          as={Link}
+                          to="/suscripciones"
+                          colorScheme="blue"
+                          leftIcon={<FaCrown />}
+                        >
+                          Upgrade a VIP
+                        </Button>
+                        
+                        <Button
+                          as="a"
+                          href={whatsappUrls.premium}
+                          target="_blank"
+                          colorScheme="green"
+                          leftIcon={<FaWhatsapp />}
+                        >
+                          Contactar
+                        </Button>
+                      </SimpleGrid>
+                    </Box>
+                  ) : cargandoArchivos ? (
+                    <Flex justify="center" p={6}>
+                      <Spinner size="lg" color={brand.primary} />
+                    </Flex>
+                  ) : misArchivos.length === 0 ? (
+                    <Box textAlign="center" py={8}>
+                      <Icon as={FaFileAlt} boxSize={10} color="gray.400" mb={3} />
+                      <Text color={subtextColor}>
+                        Aún no has subido ningún archivo
+                      </Text>
+                    </Box>
+                  ) : (
+                    <VStack spacing={4} align="stretch">
+                      {misArchivos.map((archivo) => (
+                        <Box
+                          key={archivo.id}
+                          p={4}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          borderColor={useColorModeValue("gray.200", "gray.600")}
+                          _hover={{ bg: useColorModeValue("gray.50", "gray.700") }}
+                          transition="all 0.2s"
+                        >
+                          <Flex justify="space-between" align="start" mb={2}>
+                            <VStack align="start" spacing={1} flex="1">
+                              <Text fontWeight="bold" color={textColor}>
+                                {archivo.nombre_archivo}
+                              </Text>
+                              <HStack spacing={4}>
+                                <Text fontSize="sm" color={subtextColor}>
+                                  Subido: {formatearFecha(archivo.fecha_subida)}
+                                </Text>
+                                {archivo.fecha_analisis && (
+                                  <Text fontSize="sm" color={subtextColor}>
+                                    Analizado: {formatearFecha(archivo.fecha_analisis)}
+                                  </Text>
+                                )}
+                              </HStack>
+                            </VStack>
+                            {obtenerBadgeEstado(archivo.estado)}
+                          </Flex>
+                          
+                          {archivo.analisis_admin && (
+                            <>
+                              <Divider my={3} />
+                              <Box 
+                                p={3} 
+                                bg={useColorModeValue("green.50", "green.900")} 
+                                borderRadius="md"
+                                border="1px solid"
+                                borderColor={useColorModeValue("green.200", "green.700")}
+                              >
+                                <Text fontSize="sm" fontWeight="bold" color="green.600" mb={2}>
+                                  📊 Análisis Completado:
+                                </Text>
+                                <Text fontSize="sm" whiteSpace="pre-line">
+                                  {archivo.analisis_admin}
+                                </Text>
+                              </Box>
+                            </>
+                          )}
+                        </Box>
+                      ))}
+                    </VStack>
+                  )}
+                </CardBody>
+              </Card>
+            </Box>
+          </Flex>
+        )}
+
+        {/* Sección promocional para todos (al final) */}
+        <Box mt={12}>
+          <Card textAlign="center" p={8} boxShadow="xl" bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" color="white">
+            <CardBody>
+              <VStack spacing={6}>
+                <Icon as={FaWhatsapp} boxSize={20} color={whatsappGreen} />
+                
+                <Heading size="xl">
+                  ¿Quieres análisis profesional inmediato?
+                </Heading>
+                
+                <Text maxW="lg" mx="auto" fontSize="lg" opacity={0.9}>
+                  Contacta con nuestro equipo de expertos para análisis personalizado y 
+                  acceso a clubs VIP con rakeback hasta 55%.
+                </Text>
+
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} w="full" maxW="4xl">
+                  <Button
+                    as="a"
+                    href={whatsappUrls.analisis}
+                    target="_blank"
+                    size="lg"
+                    bg="white"
+                    color="gray.800"
+                    leftIcon={<FaWhatsapp />}
+                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
+                  >
+                    Análisis de Manos
+                  </Button>
+                  
                   <Button
                     as="a"
                     href={whatsappUrls.clubs}
                     target="_blank"
+                    size="lg"
                     bg="white"
-                    color="orange.500"
+                    color="gray.800"
                     leftIcon={<FaWhatsapp />}
-                    _hover={{ bg: "whiteAlpha.900" }}
+                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
                   >
-                    Ver Clubs Disponibles
+                    Clubs VIP
                   </Button>
-                </VStack>
-              </CardBody>
-            </Card>
-          </Box>
+                  
+                  <Button
+                    as="a"
+                    href={whatsappUrls.combo}
+                    target="_blank"
+                    size="lg"
+                    bg={goldAccent}
+                    color="black"
+                    leftIcon={<FaWhatsapp />}
+                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
+                  >
+                    Combo Completo 🔥
+                  </Button>
+                </SimpleGrid>
 
-          {/* Panel derecho - Mis archivos */}
-          <Box flex="2">
-            <Card>
-              <CardHeader>
-                <Heading size="md" color={textColor}>
-                  <Icon as={FaFileAlt} mr={2} />
-                  Mis Archivos Subidos
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                {cargandoArchivos ? (
-                  <Flex justify="center" p={6}>
-                    <Spinner size="lg" color={brand.primary} />
-                  </Flex>
-                ) : misArchivos.length === 0 ? (
-                  <Box textAlign="center" py={8}>
-                    <Icon as={FaFileAlt} boxSize={10} color="gray.400" mb={3} />
-                    <Text color={subtextColor}>
-                      Aún no has subido ningún archivo
-                    </Text>
-                  </Box>
-                ) : (
-                  <VStack spacing={4} align="stretch">
-                    {misArchivos.map((archivo) => (
-                      <Box
-                        key={archivo.id}
-                        p={4}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        borderColor={useColorModeValue("gray.200", "gray.600")}
-                        _hover={{ bg: useColorModeValue("gray.50", "gray.700") }}
-                        transition="all 0.2s"
-                      >
-                        <Flex justify="space-between" align="start" mb={2}>
-                          <VStack align="start" spacing={1} flex="1">
-                            <Text fontWeight="bold" color={textColor}>
-                              {archivo.nombre_archivo}
-                            </Text>
-                            <HStack spacing={4}>
-                              <Text fontSize="sm" color={subtextColor}>
-                                Subido: {formatearFecha(archivo.fecha_subida)}
-                              </Text>
-                              {archivo.fecha_analisis && (
-                                <Text fontSize="sm" color={subtextColor}>
-                                  Analizado: {formatearFecha(archivo.fecha_analisis)}
-                                </Text>
-                              )}
-                            </HStack>
-                          </VStack>
-                          {obtenerBadgeEstado(archivo.estado)}
-                        </Flex>
-                        
-                        {archivo.analisis_admin && (
-                          <>
-                            <Divider my={3} />
-                            <Box 
-                              p={3} 
-                              bg={useColorModeValue("green.50", "green.900")} 
-                              borderRadius="md"
-                              border="1px solid"
-                              borderColor={useColorModeValue("green.200", "green.700")}
-                            >
-                              <Text fontSize="sm" fontWeight="bold" color="green.600" mb={2}>
-                                📊 Análisis Completado:
-                              </Text>
-                              <Text fontSize="sm" whiteSpace="pre-line">
-                                {archivo.analisis_admin}
-                              </Text>
-                            </Box>
-                          </>
-                        )}
-                      </Box>
-                    ))}
-                  </VStack>
-                )}
-              </CardBody>
-            </Card>
-          </Box>
-        </Flex>
+                <VStack spacing={2}>
+                  <Text fontSize="lg" fontWeight="bold" color={whatsappGreen}>
+                    📱 +51 991 351 213
+                  </Text>
+                  <Text fontSize="sm" opacity={0.8}>
+                    ✅ Respuesta en menos de 5 minutos • 🎯 Atención personalizada
+                  </Text>
+                </VStack>
+              </VStack>
+            </CardBody>
+          </Card>
+        </Box>
       </Container>
     </Box>
   );

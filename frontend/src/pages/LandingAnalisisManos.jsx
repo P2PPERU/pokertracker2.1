@@ -132,8 +132,8 @@ const LandingAnalisisManos = () => {
                 </Heading>
                 
                 <Text fontSize="xl" color={subtextColor} lineHeight="1.6" fontWeight="medium">
-                  Nuestro equipo de profesionales <strong>analizará tus manos manualmente</strong> 
-                  en PokerTracker y te dará recomendaciones específicas para 
+                  Nuestro IA entrenada en Stats <strong>analizará tus manos intensamente </strong> 
+                  buscara leaks y te dará recomendaciones específicas para 
                   <Text as="span" color="green.500" fontWeight="bold"> maximizar tus ganancias</Text>.
                 </Text>
 
