@@ -125,9 +125,9 @@ const LandingAnalisisManos = () => {
                 </HStack>
                 
                 <Heading size="2xl" color={textColor} lineHeight="1.1">
-                  Análisis Profesional
+                  Análisis Profesional de
                   <Text as="span" bgGradient="linear(to-r, #FF6B35, #F7931E)" bgClip="text"> 
-                    {" "}de Manos por Expertos
+                    {" "} Stats por Expertos
                   </Text>
                 </Heading>
                 

@@ -135,7 +135,7 @@ const Home = () => {
                     </Badge>
                   </HStack>
                   <Heading size={{ base: "md", md: "lg" }}>
-                    ¡Análisis Profesional de Manos por Expertos!
+                    ¡Análisis Profesional de Stats por Expertos!
                   </Heading>
                   <Text fontSize={{ base: "sm", md: "md" }} opacity={0.9}>
                     Mejora tu winrate +47% con análisis personalizados desde $19.99
