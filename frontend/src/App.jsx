@@ -4,10 +4,10 @@ import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './routes/PrivateRoute';
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
-import Spinner from './components/Spinner'; // Si lo sigues usando en otros lugares
-import CustomLoader from './components/CustomLoader'; // <-- Importa tu loader personalizado
+import Spinner from './components/Spinner';
+import CustomLoader from './components/CustomLoader';
 
-// 🔁 Lazy load de páginas pesadas
+// 🔁 Lazy load de páginas
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -18,10 +18,11 @@ const ResetearPassword = lazy(() => import('./pages/ResetearPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Perfil = lazy(() => import('./pages/Perfil'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
-// Importa la página de Favoritos
 const Favoritos = lazy(() => import('./pages/Favoritos'));
-// Importa la página de Análisis de Manos
 const AnalisisManos = lazy(() => import('./pages/AnalisisManos'));
+
+// 🆕 Página pública de landing para análisis
+const LandingAnalisisManos = lazy(() => import('./pages/LandingAnalisisManos'));
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -38,9 +39,9 @@ function App() {
     <AuthProvider>
       <Router>
         <Navbar />
-        {/* Usa CustomLoader como fallback */}
         <Suspense fallback={<CustomLoader />}>
           <Routes>
+            {/* Páginas públicas */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -48,28 +49,28 @@ function App() {
             <Route path="/suscripciones" element={<Suscripciones />} />
             <Route path="/recuperar" element={<RecuperarPassword />} />
             <Route path="/resetear" element={<ResetearPassword />} />
+            <Route path="/landing-analisis" element={<LandingAnalisisManos />} /> {/* <-- Nueva ruta pública */}
 
-            {/* 🔒 Usuarios registrados con cualquier suscripción */}
+            {/* Usuarios registrados (cualquier plan) */}
             <Route element={<PrivateRoute suscripciones={["bronce", "plata", "oro"]} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/perfil" element={<Perfil />} />
-              {/* Se agrega la ruta para Favoritos */}
               <Route path="/favoritos" element={<Favoritos />} />
             </Route>
 
-            {/* 🔒 Solo usuarios VIP (plata y oro) para análisis de manos */}
+            {/* Solo VIP */}
             <Route element={<PrivateRoute suscripciones={["plata", "oro"]} />}>
               <Route path="/analisis-manos" element={<AnalisisManos />} />
             </Route>
 
-            {/* 🔒 Solo accesible para rol "admin" */}
+            {/* Solo Admin */}
             <Route element={<PrivateRoute roles={["admin"]} />}>
               <Route path="/admin" element={<AdminPanel />} />
             </Route>
           </Routes>
         </Suspense>
 
-        {/* ✅ Modal flotante para login */}
+        {/* Modal de login */}
         <AuthModal isOpen={isLoginModalOpen} onClose={cerrarModalLogin} />
       </Router>
     </AuthProvider>
