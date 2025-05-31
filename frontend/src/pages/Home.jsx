@@ -34,7 +34,10 @@ import {
   FaFileAlt,
   FaWhatsapp,
   FaFire,
-  FaCrown
+  FaCrown,
+  FaUsers,
+  FaMoneyBillWave,
+  FaTrophy
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
@@ -55,12 +58,22 @@ const animationStyles = css`
     100% { opacity: 0.7; transform: scale(1); }
   }
 
+  @keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+
   .floating-animation {
     animation: float 6s ease-in-out infinite;
   }
 
   .pulse-animation {
     animation: pulse 4s ease-in-out infinite;
+  }
+
+  .marquee-animation {
+    animation: marquee 25s linear infinite;
+    white-space: nowrap;
   }
   
   .service-icon {
@@ -172,10 +185,154 @@ const Home = () => {
           </Container>
         </Box>
 
+        {/* 🏆 NUEVO: Banner PERU EV+ - Flotante y Sticky */}
+        <Box
+          bg="linear-gradient(135deg, #1E40AF, #3B82F6, #06B6D4)"
+          color="white"
+          py={2}
+          position="sticky"
+          top="0"
+          zIndex={1001}
+          overflow="hidden"
+          boxShadow="lg"
+          borderBottom="1px solid"
+          borderColor="blue.300"
+        >
+          <Box className="marquee-animation">
+            <Flex align="center" gap={8} px={4}>
+              {/* Contenido principal */}
+              <HStack spacing={3} minW="max-content">
+                <Icon as={FaTrophy} boxSize={6} color="yellow.300" />
+                <Text fontSize={{ base: "md", md: "lg" }} fontWeight="bold">
+                  🏆 PERU EV+ - El club con más recreacionales del mercado
+                </Text>
+                <Badge 
+                  bg="green.500" 
+                  color="white" 
+                  px={3} 
+                  py={1} 
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="bold"
+                >
+                  50% RAKEBACK
+                </Badge>
+                <Text fontSize={{ base: "sm", md: "md" }} opacity={0.9}>
+                  Únete y obtén 50% de rakeback + mesas llenas de fish 🐟
+                </Text>
+                <Button
+                  as="a"
+                  href="https://wa.me/51991351213?text=🏆%20Hola!%20Quiero%20unirme%20a%20PERU%20EV+%20y%20obtener%2050%25%20rakeback"
+                  target="_blank"
+                  size="sm"
+                  bg="green.500"
+                  color="white"
+                  leftIcon={<FaWhatsapp />}
+                  _hover={{
+                    bg: "green.600",
+                    transform: "scale(1.05)"
+                  }}
+                  fontWeight="bold"
+                  px={4}
+                  borderRadius="full"
+                  transition="all 0.3s"
+                  minW="max-content"
+                >
+                  Unirme Ahora
+                </Button>
+              </HStack>
+
+              {/* Contenido duplicado para efecto continuo */}
+              <HStack spacing={3} minW="max-content">
+                <Icon as={FaTrophy} boxSize={6} color="yellow.300" />
+                <Text fontSize={{ base: "md", md: "lg" }} fontWeight="bold">
+                  🏆 PERU EV+ - El club con más recreacionales del mercado
+                </Text>
+                <Badge 
+                  bg="green.500" 
+                  color="white" 
+                  px={3} 
+                  py={1} 
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="bold"
+                >
+                  50% RAKEBACK
+                </Badge>
+                <Text fontSize={{ base: "sm", md: "md" }} opacity={0.9}>
+                  Únete y obtén 50% de rakeback + mesas llenas de fish 🐟
+                </Text>
+                <Button
+                  as="a"
+                  href="https://wa.me/51991351213?text=🏆%20Hola!%20Quiero%20unirme%20a%20PERU%20EV+%20y%20obtener%2050%25%20rakeback"
+                  target="_blank"
+                  size="sm"
+                  bg="green.500"
+                  color="white"
+                  leftIcon={<FaWhatsapp />}
+                  _hover={{
+                    bg: "green.600",
+                    transform: "scale(1.05)"
+                  }}
+                  fontWeight="bold"
+                  px={4}
+                  borderRadius="full"
+                  transition="all 0.3s"
+                  minW="max-content"
+                >
+                  Unirme Ahora
+                </Button>
+              </HStack>
+
+              {/* Tercera repetición para mejor continuidad */}
+              <HStack spacing={3} minW="max-content">
+                <Icon as={FaTrophy} boxSize={6} color="yellow.300" />
+                <Text fontSize={{ base: "md", md: "lg" }} fontWeight="bold">
+                  🏆 PERU EV+ - El club con más recreacionales del mercado
+                </Text>
+                <Badge 
+                  bg="green.500" 
+                  color="white" 
+                  px={3} 
+                  py={1} 
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="bold"
+                >
+                  50% RAKEBACK
+                </Badge>
+                <Text fontSize={{ base: "sm", md: "md" }} opacity={0.9}>
+                  Únete y obtén 50% de rakeback + mesas llenas de fish 🐟
+                </Text>
+                <Button
+                  as="a"
+                  href="https://wa.me/51991351213?text=🏆%20Hola!%20Quiero%20unirme%20a%20PERU%20EV+%20y%20obtener%2050%25%20rakeback"
+                  target="_blank"
+                  size="sm"
+                  bg="green.500"
+                  color="white"
+                  leftIcon={<FaWhatsapp />}
+                  _hover={{
+                    bg: "green.600",
+                    transform: "scale(1.05)"
+                  }}
+                  fontWeight="bold"
+                  px={4}
+                  borderRadius="full"
+                  transition="all 0.3s"
+                  minW="max-content"
+                >
+                  Unirme Ahora
+                </Button>
+              </HStack>
+            </Flex>
+          </Box>
+        </Box>
+
         {/* Hero principal mejorado */}
         <Box
           position="relative"
-          minH="90vh"
+          minH="85vh"
           bgImage="url('./images/hero-poker-bg.jpg')"
           bgSize="cover"
           bgPosition="center"
@@ -191,15 +348,15 @@ const Home = () => {
             zIndex: 1
           }}
         >
-          <Container maxW="container.xl" position="relative" zIndex="2" py={[12, 20]}>
+          <Container maxW="container.xl" position="relative" zIndex="2" py={[8, 16]}>
             <Flex
               direction={["column", "column", "row"]}
               align="center"
               justify="space-between"
               mx="auto"
               gap={10}
-              pt={{ base: 10, md: 0 }}
-              h={{ md: "80vh" }}
+              pt={{ base: 8, md: 4 }}
+              h={{ md: "75vh" }}
             >
               <MotionBox
                 flex="1"
@@ -207,7 +364,7 @@ const Home = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8 }}
               >
-                <Flex align="center" gap={3} mb={3} justify={["center", "flex-start"]}>
+                <Flex align="center" gap={3} mb={4} justify={["center", "flex-start"]}>
                   <Badge
                     px={4}
                     py={2}
@@ -218,7 +375,7 @@ const Home = () => {
                     borderRadius="full"
                     letterSpacing="wider"
                     boxShadow="md"
-                    mb={4}
+                    mb={3}
                   >
                     VERSIÓN 2.1 - POTENCIADA CON IA
                   </Badge>
@@ -391,14 +548,15 @@ const Home = () => {
           <Container maxW="container.xl" position="relative" zIndex="2">
             <Box 
               position={{ base: "relative", lg: "absolute" }} 
-              bottom={{ lg: "10%" }} 
+              bottom={{ lg: "8%" }} 
               left="0" 
               right="0" 
               mb={{ base: 8, lg: 0 }}
+              mt={{ base: 12, lg: 0 }}
             >
               <SimpleGrid 
                 columns={{ base: 1, md: 3 }} 
-                spacing={8} 
+                spacing={10} 
                 maxW={{ base: "100%", lg: "90%" }} 
                 mx="auto"
               >
@@ -467,7 +625,7 @@ const Home = () => {
           <Box
             maxW="container.xl"
             mx="auto"
-            mt={{ base: 12, lg: 20 }}
+            mt={{ base: 16, lg: 24 }}
             px={{ base: 4, md: 8 }}
           >
             <VStack spacing={8} mb={16}>
@@ -509,7 +667,7 @@ const Home = () => {
               overflow="hidden"
               boxShadow="2xl"
               bg={cardBg}
-              mb={16}
+              mb={20}
               className="feature-card"
               _hover={{
                 transform: "translateY(-5px)",
@@ -578,7 +736,7 @@ const Home = () => {
               overflow="hidden"
               boxShadow="2xl"
               bg={cardBg}
-              mb={16}
+              mb={20}
               className="feature-card"
               _hover={{
                 transform: "translateY(-5px)",
@@ -687,7 +845,7 @@ const Home = () => {
               overflow="hidden"
               boxShadow="2xl"
               bg={cardBg}
-              mb={16}
+              mb={20}
               className="feature-card"
               _hover={{
                 transform: "translateY(-5px)",
@@ -804,8 +962,8 @@ const Home = () => {
             {/* Tarjetas de servicios */}
             <SimpleGrid
               columns={[1, 2, 4]}
-              spacing={8}
-              mb={16}
+              spacing={10}
+              mb={20}
             >
               {[
                 { 
@@ -895,7 +1053,7 @@ const Home = () => {
                 </Heading>
               </Flex>
               
-              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
                 {[
                   {
                     name: "crazymoney.",
@@ -983,7 +1141,7 @@ const Home = () => {
               textAlign="center" 
               borderRadius="xl" 
               boxShadow="md"
-              mt={16}
+              mt={20}
               borderTop="4px solid"
               borderColor={brand.primary}
             >
