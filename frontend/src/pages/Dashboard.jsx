@@ -468,8 +468,8 @@ const Dashboard = () => {
                 <option value="XPK">X-Poker</option>
                 <option value="PPP">PPPoker</option>
                 <option value="SUP">SupremaPoker</option>
-                <option value="CLG">ClubGG</option>
-                <option value="CPK">CoinPoker</option>
+                <option value="PM">ClubGG</option>
+                <option value="CNP">CoinPoker</option>
               </Select>
               
               <Box position="relative" flex="1" maxW={{ base: "100%", md: "400px" }}>
