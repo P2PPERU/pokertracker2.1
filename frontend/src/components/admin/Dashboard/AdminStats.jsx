@@ -24,74 +24,87 @@ import {
 } from 'react-icons/fa';
 import { useAdminMetrics } from '../../../hooks/admin/useAdminMetrics';
 
+// Función helper para manejar números de forma segura
+const safeToFixed = (value, decimals = 2) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? '0' : num.toFixed(decimals);
+};
+
+const safeNumber = (value) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+};
+
 // Componente StatBox mejorado con datos reales
 const StatBox = ({ label, number, icon, growth, color = "#4066ED", isLoading = false }) => {
-  const cardBg = useColorModeValue("white", "gray.800");
-  
-  if (isLoading) {
+    // ✅ TODOS LOS HOOKS AL PRINCIPIO - SIEMPRE EN EL MISMO ORDEN
+    const cardBg = useColorModeValue("white", "gray.800");
+    const blueBg = useColorModeValue("blue.50", "blue.900");
+    
+    if (isLoading) {
+        return (
+            <Box 
+                bg={cardBg} 
+                p={4} 
+                borderRadius="lg" 
+                boxShadow="base"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+            >
+                <Spinner size="md" color={color} />
+            </Box>
+        );
+    }
+    
     return (
-      <Box 
-        bg={cardBg} 
-        p={4} 
-        borderRadius="lg" 
-        boxShadow="base"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Spinner size="md" color={color} />
-      </Box>
-    );
-  }
-  
-  return (
-    <Box 
-      bg={cardBg} 
-      p={4} 
-      borderRadius="lg" 
-      boxShadow="base"
-      display="flex"
-      alignItems="center"
-      transition="transform 0.2s"
-      _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
-      position="relative"
-    >
-      <Flex alignItems="center" w="100%">
         <Box 
-          p={3}
-          bg={useColorModeValue("blue.50", "blue.900")}
-          borderRadius="lg"
-          mr={4}
+            bg={cardBg} 
+            p={4} 
+            borderRadius="lg" 
+            boxShadow="base"
+            display="flex"
+            alignItems="center"
+            transition="transform 0.2s"
+            _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
+            position="relative"
         >
-          <Icon as={icon} boxSize={6} color={color} />
+            <Flex alignItems="center" w="100%">
+                <Box 
+                    p={3}
+                    bg={blueBg}  // ✅ USA LA VARIABLE, NO useColorModeValue AQUÍ
+                    borderRadius="lg"
+                    mr={4}
+                >
+                    <Icon as={icon} boxSize={6} color={color} />
+                </Box>
+                
+                <Box flex="1">
+                    <Text color="gray.500" fontSize="sm" fontWeight="medium">
+                        {label}
+                    </Text>
+                    <HStack spacing={2} align="center">
+                        <Text fontSize="2xl" fontWeight="bold">
+                            {typeof number === 'number' ? 
+                                (number >= 1000 ? `${(number/1000).toFixed(1)}k` : number.toLocaleString()) 
+                                : number
+                            }
+                        </Text>
+                        {growth !== undefined && !isNaN(growth) && (
+                            <Badge 
+                                colorScheme={growth > 0 ? "green" : growth < 0 ? "red" : "gray"}
+                                fontSize="xs"
+                                px={2}
+                                py={1}
+                            >
+                                {growth > 0 ? "+" : ""}{safeToFixed(growth, 1)}%
+                            </Badge>
+                        )}
+                    </HStack>
+                </Box>
+            </Flex>
         </Box>
-        
-        <Box flex="1">
-          <Text color="gray.500" fontSize="sm" fontWeight="medium">
-            {label}
-          </Text>
-          <HStack spacing={2} align="center">
-            <Text fontSize="2xl" fontWeight="bold">
-              {typeof number === 'number' ? 
-                (number >= 1000 ? `${(number/1000).toFixed(1)}k` : number.toLocaleString()) 
-                : number
-              }
-            </Text>
-            {growth !== undefined && (
-              <Badge 
-                colorScheme={growth > 0 ? "green" : growth < 0 ? "red" : "gray"}
-                fontSize="xs"
-                px={2}
-                py={1}
-              >
-                {growth > 0 ? "+" : ""}{growth.toFixed(1)}%
-              </Badge>
-            )}
-          </HStack>
-        </Box>
-      </Flex>
-    </Box>
-  );
+    );
 };
 
 const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
@@ -119,6 +132,35 @@ const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
       </Box>
     );
   }
+
+  // Normalizar métricas para evitar errores
+  const safeMetrics = {
+    users: {
+      total_users: safeNumber(metrics?.users?.total_users || 0),
+      activeUsers: safeNumber(metrics?.users?.activeUsers || 0),
+      paid_users: safeNumber(metrics?.users?.paid_users || 0),
+      new_registrations: safeNumber(metrics?.users?.new_registrations || 0),
+      conversionRate: safeNumber(metrics?.users?.conversionRate || 0)
+    },
+    financial: {
+      mrr: safeNumber(metrics?.financial?.mrr || 0),
+      arpu: safeNumber(metrics?.financial?.arpu || 0)
+    },
+    usage: {
+      player_searches: safeNumber(metrics?.usage?.player_searches || 0),
+      ai_analyses: safeNumber(metrics?.usage?.ai_analyses || 0),
+      avg_searches_per_user: safeNumber(metrics?.usage?.avg_searches_per_user || 0)
+    },
+    growth: {
+      total_users: safeNumber(metrics?.growth?.total_users || 0),
+      active_users_7d: safeNumber(metrics?.growth?.active_users_7d || 0),
+      paid_users: safeNumber(metrics?.growth?.paid_users || 0),
+      mrr: safeNumber(metrics?.growth?.mrr || 0),
+      player_searches: safeNumber(metrics?.growth?.player_searches || 0),
+      ai_analyses: safeNumber(metrics?.growth?.ai_analyses || 0),
+      conversion_rate: safeNumber(metrics?.growth?.conversion_rate || 0)
+    }
+  };
 
   return (
     <Box mb={6}>
@@ -155,53 +197,53 @@ const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
       <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 6 }} spacing={4}>
         <StatBox 
           label="Total Usuarios" 
-          number={metrics.users.total_users} 
+          number={safeMetrics.users.total_users} 
           icon={FaUsers}
-          growth={metrics.growth.total_users}
+          growth={safeMetrics.growth.total_users}
           isLoading={loading}
         />
         
         <StatBox 
           label="Usuarios Activos (7d)" 
-          number={metrics.users.activeUsers} 
+          number={safeMetrics.users.activeUsers} 
           icon={FaChartLine}
-          growth={metrics.growth.active_users_7d}
+          growth={safeMetrics.growth.active_users_7d}
           color="#10B981"
           isLoading={loading}
         />
         
         <StatBox 
           label="Usuarios Pagados" 
-          number={metrics.users.paid_users} 
+          number={safeMetrics.users.paid_users} 
           icon={FaGem}
-          growth={metrics.growth.paid_users}
+          growth={safeMetrics.growth.paid_users}
           color="#F59E0B"
           isLoading={loading}
         />
         
         <StatBox 
           label="MRR (Ingresos)" 
-          number={`$${metrics.financial.mrr.toFixed(0)}`} 
+          number={`$${safeToFixed(safeMetrics.financial.mrr, 0)}`} 
           icon={FaMoneyBillWave}
-          growth={metrics.growth.mrr}
+          growth={safeMetrics.growth.mrr}
           color="#10B981"
           isLoading={loading}
         />
         
         <StatBox 
           label="Búsquedas Hoy" 
-          number={metrics.usage.player_searches} 
+          number={safeMetrics.usage.player_searches} 
           icon={FaFileAlt}
-          growth={metrics.growth.player_searches}
+          growth={safeMetrics.growth.player_searches}
           color="#3B82F6"
           isLoading={loading}
         />
         
         <StatBox 
           label="Análisis IA Hoy" 
-          number={metrics.usage.ai_analyses} 
+          number={safeMetrics.usage.ai_analyses} 
           icon={FaRobot}
-          growth={metrics.growth.ai_analyses}
+          growth={safeMetrics.growth.ai_analyses}
           color="#8B5CF6"
           isLoading={loading}
         />
@@ -211,7 +253,7 @@ const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4} mt={4}>
         <StatBox 
           label="Nuevos Registros" 
-          number={metrics.users.new_registrations} 
+          number={safeMetrics.users.new_registrations} 
           icon={FaUsers}
           color="#06B6D4"
           isLoading={loading}
@@ -219,16 +261,16 @@ const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
         
         <StatBox 
           label="Tasa Conversión" 
-          number={`${metrics.users.conversionRate.toFixed(1)}%`} 
+          number={`${safeToFixed(safeMetrics.users.conversionRate, 1)}%`} 
           icon={FaChartLine}
-          growth={metrics.growth.conversion_rate}
+          growth={safeMetrics.growth.conversion_rate}
           color="#EF4444"
           isLoading={loading}
         />
         
         <StatBox 
           label="ARPU ($/usuario)" 
-          number={`$${metrics.financial.arpu.toFixed(2)}`} 
+          number={`$${safeToFixed(safeMetrics.financial.arpu, 2)}`} 
           icon={FaMoneyBillWave}
           color="#F59E0B"
           isLoading={loading}
@@ -236,7 +278,7 @@ const AdminStats = ({ usuarios = [], archivosManos = [] }) => {
         
         <StatBox 
           label="Búsquedas/Usuario" 
-          number={metrics.usage.avg_searches_per_user.toFixed(1)} 
+          number={safeToFixed(safeMetrics.usage.avg_searches_per_user, 1)} 
           icon={FaFileAlt}
           color="#8B5CF6"
           isLoading={loading}

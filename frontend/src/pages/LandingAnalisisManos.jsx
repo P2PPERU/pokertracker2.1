@@ -44,6 +44,8 @@ const LandingAnalisisManos = () => {
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "gray.100");
   const subtextColor = useColorModeValue("gray.600", "gray.400");
+  const testimonyTextColor = useColorModeValue("gray.700", "gray.200");
+  const testimonyNameColor = useColorModeValue(brand.primary, "blue.300");
   const mainGradient = gradients.main;
   const whatsappGreen = "#25D366";
   const goldAccent = "#FFD700";
@@ -94,6 +96,119 @@ const LandingAnalisisManos = () => {
           </Flex>
         </Box>
 
+        {/* MEGA OFERTA COMBO - MOVIDO A LA PARTE SUPERIOR */}
+        <Card 
+          bg="linear-gradient(135deg, #FF0080 0%, #FF8C42 50%, #FFD700 100%)" 
+          color="white" 
+          mb={8}
+          overflow="hidden"
+          position="relative"
+          boxShadow="2xl"
+        >
+          <Box 
+            position="absolute"
+            top="-50%"
+            right="-20%"
+            width="300px"
+            height="300px"
+            borderRadius="full"
+            bg="whiteAlpha.100"
+          />
+          <Box 
+            position="absolute"
+            bottom="-30%"
+            left="-15%"
+            width="200px"
+            height="200px"
+            borderRadius="full"
+            bg="whiteAlpha.100"
+          />
+          <CardBody p={8} position="relative">
+            <VStack spacing={6} textAlign="center">
+              <HStack justify="center" spacing={4}>
+                <Badge bg="white" color="red.500" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
+                  🔥 OFERTA LIMITADA
+                </Badge>
+                <Badge bg="yellow.400" color="black" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
+                  70% DESC
+                </Badge>
+              </HStack>
+              
+              <Heading size="2xl" textAlign="center">
+                COMBO COMPLETO
+                <Text>Premium + Clubs + Rakeback</Text>
+              </Heading>
+              
+              <VStack spacing={2}>
+                <Text fontSize="xl" opacity={0.95} maxW="2xl" mx="auto">
+                  🎯 La oferta más completa del mercado: Suscripción Premium + Acceso a Clubs VIP + Rakeback hasta 55%
+                </Text>
+                <Text fontSize="xl" fontWeight="bold" opacity={0.95}>
+                  ¡Y pagas solo con las ganancias del rakeback!
+                </Text>
+              </VStack>
+
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="full">
+                <VStack>
+                  <Icon as={FaRocket} boxSize={8} />
+                  <Text fontWeight="bold">Análisis IA Ilimitado</Text>
+                </VStack>
+                <VStack>
+                  <Icon as={FaMoneyBillWave} boxSize={8} />
+                  <Text fontWeight="bold">Rakeback 55%</Text>
+                </VStack>
+                <VStack>
+                  <Icon as={FaUsers} boxSize={8} />
+                  <Text fontWeight="bold">Clubs Exclusivos</Text>
+                </VStack>
+                <VStack>
+                  <Icon as={FaHandshake} boxSize={8} />
+                  <Text fontWeight="bold">Soporte VIP</Text>
+                </VStack>
+              </SimpleGrid>
+
+              <Box textAlign="center">
+                <Text fontSize="xl" textDecoration="line-through" opacity={0.7}>
+                  Valor normal: $39.99/mes
+                </Text>
+                <Text fontSize="5xl" fontWeight="bold" lineHeight="1">
+                  $19.99/mes
+                </Text>
+                <Text fontSize="lg" opacity={0.9}>
+                  🎁 Se paga solo con rakeback - ¡GANANCIA NETA!
+                </Text>
+              </Box>
+
+              <Button
+                as="a"
+                href={whatsappUrls.combo}
+                target="_blank"
+                size="xl"
+                bg="white"
+                color="red.500"
+                leftIcon={<FaWhatsapp size="24px" />}
+                rightIcon={<FaArrowRight />}
+                _hover={{
+                  bg: "whiteAlpha.900",
+                  transform: "translateY(-3px)",
+                  boxShadow: "2xl"
+                }}
+                py={8}
+                px={12}
+                fontSize="xl"
+                fontWeight="bold"
+                borderRadius="full"
+              >
+                🔥 ACTIVAR COMBO AHORA
+              </Button>
+
+              <Text fontSize="sm" opacity={0.8}>
+                ⏰ Oferta válida solo por tiempo limitado - Solo 20 cupos disponibles
+              </Text>
+            </VStack>
+          </CardBody>
+        </Card>
+
         {/* Hero Section Principal */}
         <Card mb={8} overflow="hidden" position="relative" boxShadow="2xl">
           <Box 
@@ -131,11 +246,16 @@ const LandingAnalisisManos = () => {
                   </Text>
                 </Heading>
                 
-                <Text fontSize="xl" color={subtextColor} lineHeight="1.6" fontWeight="medium">
-                  Nuestro IA entrenada en Stats <strong>analizará tus manos intensamente </strong> 
-                  buscara leaks y te dará recomendaciones específicas para 
-                  <Text as="span" color="green.500" fontWeight="bold"> maximizar tus ganancias</Text>.
-                </Text>
+                {/* ✅ CORREGIDO: Separé el texto para evitar nesting de elementos */}
+                <VStack align="start" spacing={2}>
+                  <Text fontSize="xl" color={subtextColor} lineHeight="1.6" fontWeight="medium">
+                    Nuestro IA entrenada en Stats analizará tus manos intensamente 
+                    buscara leaks y te dará recomendaciones específicas para
+                  </Text>
+                  <Text fontSize="xl" color="green.500" fontWeight="bold">
+                    maximizar tus ganancias.
+                  </Text>
+                </VStack>
 
                 {/* Stats impactantes */}
                 <SimpleGrid columns={3} spacing={4} w="full">
@@ -212,7 +332,7 @@ const LandingAnalisisManos = () => {
                 </VStack>
               </VStack>
 
-              {/* Imagen/Testimonio */}
+              {/* Imagen/Testimonio - ✅ CORREGIDO: Colores para modo oscuro */}
               <Box position="relative">
                 <Box 
                   h="400px" 
@@ -227,13 +347,13 @@ const LandingAnalisisManos = () => {
                 >
                   <Icon as={FaTrophy} boxSize={24} color="white" opacity={0.3} />
                   
-                  {/* Testimonio flotante */}
+                  {/* Testimonio flotante - ✅ CORREGIDO: Colores para modo oscuro */}
                   <Box 
                     position="absolute"
                     bottom="20px"
                     left="20px"
                     right="20px"
-                    bg="white"
+                    bg={cardBg}
                     p={4}
                     borderRadius="xl"
                     boxShadow="2xl"
@@ -245,10 +365,10 @@ const LandingAnalisisManos = () => {
                         <Icon key={i} as={FaStar} color="yellow.400" boxSize={4} />
                       ))}
                     </HStack>
-                    <Text fontSize="sm" fontWeight="medium" mb={2}>
+                    <Text fontSize="sm" fontWeight="medium" mb={2} color={testimonyTextColor}>
                       "Mi winrate subió de 2bb/100 a 8bb/100 en NL50 después del análisis"
                     </Text>
-                    <Text fontSize="xs" fontWeight="bold" color={brand.primary}>
+                    <Text fontSize="xs" fontWeight="bold" color={testimonyNameColor}>
                       - Carlos M., NL50 Regular
                     </Text>
                   </Box>
@@ -275,34 +395,39 @@ const LandingAnalisisManos = () => {
                 <HStack justify="space-between" w="full">
                   <HStack>
                     <Icon as={FaUsers} color="orange.500" boxSize={6} />
-                    <Heading size="md">Clubs VIP Exclusivos</Heading>
+                    <Heading size="md" color={textColor}>Clubs VIP Exclusivos</Heading>
                   </HStack>
                   <Badge colorScheme="orange" px={3} py={1} borderRadius="full">
                     🔥 HOT
                   </Badge>
                 </HStack>
                 
-                <Text color={subtextColor} fontWeight="medium">
-                  Accede a los clubs más <strong>soft</strong> con <Text as="span" color="green.500" fontWeight="bold">rakeback hasta 55%</Text> 
-                  {" "}y mesas llenas de recreacionales.
-                </Text>
+                {/* ✅ CORREGIDO: Separé el texto para evitar nesting */}
+                <VStack align="start" spacing={1}>
+                  <Text color={subtextColor} fontWeight="medium">
+                    Accede a los clubs más soft con rakeback hasta 55%
+                  </Text>
+                  <Text color="green.500" fontWeight="bold">
+                    y mesas llenas de recreacionales.
+                  </Text>
+                </VStack>
                 
                 <SimpleGrid columns={2} spacing={3} w="full">
                   <HStack>
                     <Icon as={FaMoneyBillWave} color="green.500" />
-                    <Text fontSize="sm">Rakeback 45-55%</Text>
+                    <Text fontSize="sm" color={textColor}>Rakeback 45-55%</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaTrophy} color="gold" />
-                    <Text fontSize="sm">Freerolls VIP</Text>
+                    <Text fontSize="sm" color={textColor}>Freerolls VIP</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaHandshake} color="blue.500" />
-                    <Text fontSize="sm">Soporte 24/7</Text>
+                    <Text fontSize="sm" color={textColor}>Soporte 24/7</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaChartLine} color="purple.500" />
-                    <Text fontSize="sm">Mesas soft</Text>
+                    <Text fontSize="sm" color={textColor}>Mesas soft</Text>
                   </HStack>
                 </SimpleGrid>
 
@@ -339,34 +464,39 @@ const LandingAnalisisManos = () => {
                 <HStack justify="space-between" w="full">
                   <HStack>
                     <Icon as={FaPhoneAlt} color="purple.500" boxSize={6} />
-                    <Heading size="md">Apps Premium</Heading>
+                    <Heading size="md" color={textColor}>Apps Premium</Heading>
                   </HStack>
                   <Badge colorScheme="purple" px={3} py={1} borderRadius="full">
                     💎 VIP
                   </Badge>
                 </HStack>
                 
-                <Text color={subtextColor} fontWeight="medium">
-                  Las mejores apps de poker con <strong>acción garantizada 24/7</strong> 
-                  {" "}y el rake más bajo del mercado.
-                </Text>
+                {/* ✅ CORREGIDO: Separé el texto para evitar nesting */}
+                <VStack align="start" spacing={1}>
+                  <Text color={subtextColor} fontWeight="medium">
+                    Las mejores apps de poker con acción garantizada 24/7
+                  </Text>
+                  <Text color={subtextColor} fontWeight="medium">
+                    y el rake más bajo del mercado.
+                  </Text>
+                </VStack>
                 
                 <SimpleGrid columns={2} spacing={3} w="full">
                   <HStack>
                     <Icon as={FaStar} color="yellow.400" />
-                    <Text fontSize="sm">Mesas activas</Text>
+                    <Text fontSize="sm" color={textColor}>Mesas activas</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaGift} color="pink.500" />
-                    <Text fontSize="sm">Bonos VIP</Text>
+                    <Text fontSize="sm" color={textColor}>Bonos VIP</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaCheckCircle} color="green.500" />
-                    <Text fontSize="sm">Retiros rápidos</Text>
+                    <Text fontSize="sm" color={textColor}>Retiros rápidos</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaFire} color="red.500" />
-                    <Text fontSize="sm">Rake bajo</Text>
+                    <Text fontSize="sm" color={textColor}>Rake bajo</Text>
                   </HStack>
                 </SimpleGrid>
 
@@ -389,115 +519,6 @@ const LandingAnalisisManos = () => {
           </Card>
         </SimpleGrid>
 
-        {/* MEGA OFERTA COMBO */}
-        <Card 
-          bg="linear-gradient(135deg, #FF0080 0%, #FF8C42 50%, #FFD700 100%)" 
-          color="white" 
-          mb={8}
-          overflow="hidden"
-          position="relative"
-          boxShadow="2xl"
-        >
-          <Box 
-            position="absolute"
-            top="-50%"
-            right="-20%"
-            width="300px"
-            height="300px"
-            borderRadius="full"
-            bg="whiteAlpha.100"
-          />
-          <Box 
-            position="absolute"
-            bottom="-30%"
-            left="-15%"
-            width="200px"
-            height="200px"
-            borderRadius="full"
-            bg="whiteAlpha.100"
-          />
-          <CardBody p={8} position="relative">
-            <VStack spacing={6} textAlign="center">
-              <HStack justify="center" spacing={4}>
-                <Badge bg="white" color="red.500" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
-                  🔥 OFERTA LIMITADA
-                </Badge>
-                <Badge bg="yellow.400" color="black" px={4} py={2} borderRadius="full" fontSize="lg" fontWeight="bold">
-                  70% DESC
-                </Badge>
-              </HStack>
-              
-              <Heading size="2xl" textAlign="center">
-                COMBO COMPLETO
-                <Text>Premium + Clubs + Rakeback</Text>
-              </Heading>
-              
-              <Text fontSize="xl" opacity={0.95} maxW="2xl" mx="auto">
-                🎯 La oferta más completa del mercado: Suscripción Premium + Acceso a Clubs VIP + Rakeback hasta 55%
-                <Text as="span" fontWeight="bold"> ¡Y pagas solo con las ganancias del rakeback!</Text>
-              </Text>
-
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="full">
-                <VStack>
-                  <Icon as={FaRocket} boxSize={8} />
-                  <Text fontWeight="bold">Análisis IA Ilimitado</Text>
-                </VStack>
-                <VStack>
-                  <Icon as={FaMoneyBillWave} boxSize={8} />
-                  <Text fontWeight="bold">Rakeback 55%</Text>
-                </VStack>
-                <VStack>
-                  <Icon as={FaUsers} boxSize={8} />
-                  <Text fontWeight="bold">Clubs Exclusivos</Text>
-                </VStack>
-                <VStack>
-                  <Icon as={FaHandshake} boxSize={8} />
-                  <Text fontWeight="bold">Soporte VIP</Text>
-                </VStack>
-              </SimpleGrid>
-
-              <Box textAlign="center">
-                <Text fontSize="xl" textDecoration="line-through" opacity={0.7}>
-                  Valor normal: $39.99S/mes
-                </Text>
-                <Text fontSize="5xl" fontWeight="bold" lineHeight="1">
-                  $19.99/mes
-                </Text>
-                <Text fontSize="lg" opacity={0.9}>
-                  🎁 Se paga solo con rakeback - ¡GANANCIA NETA!
-                </Text>
-              </Box>
-
-              <Button
-                as="a"
-                href={whatsappUrls.combo}
-                target="_blank"
-                size="xl"
-                bg="white"
-                color="red.500"
-                leftIcon={<FaWhatsapp size="24px" />}
-                rightIcon={<FaArrowRight />}
-                _hover={{
-                  bg: "whiteAlpha.900",
-                  transform: "translateY(-3px)",
-                  boxShadow: "2xl"
-                }}
-                py={8}
-                px={12}
-                fontSize="xl"
-                fontWeight="bold"
-                borderRadius="full"
-              >
-                🔥 ACTIVAR COMBO AHORA
-              </Button>
-
-              <Text fontSize="sm" opacity={0.8}>
-                ⏰ Oferta válida solo por tiempo limitado - Solo 20 cupos disponibles
-              </Text>
-            </VStack>
-          </CardBody>
-        </Card>
-
         {/* Call to Action Final */}
         <Card textAlign="center" p={8} boxShadow="xl">
           <CardBody>
@@ -508,10 +529,15 @@ const LandingAnalisisManos = () => {
                 ¿Listo para ser un jugador EV+?
               </Heading>
               
-              <Text color={subtextColor} maxW="lg" mx="auto" fontSize="lg">
-                Únete a <strong>cientos de jugadores</strong> que ya están ganando más con nuestro sistema completo.
-                <Text color="green.500" fontWeight="bold">¡El 87% de nuestros clientes mejora su winrate en 30 días!</Text>
-              </Text>
+              {/* ✅ CORREGIDO: Separé el texto para evitar nesting */}
+              <VStack spacing={2}>
+                <Text color={subtextColor} maxW="lg" mx="auto" fontSize="lg">
+                  Únete a cientos de jugadores que ya están ganando más con nuestro sistema completo.
+                </Text>
+                <Text color="green.500" fontWeight="bold" fontSize="lg">
+                  ¡El 87% de nuestros clientes mejora su winrate en 30 días!
+                </Text>
+              </VStack>
 
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} w="full" maxW="4xl">
                 <Button

@@ -12,19 +12,19 @@ const MetricsCalculator = {
       const totalUsersQuery = `
         SELECT COUNT(*) as count 
         FROM usuarios 
-        WHERE DATE(created_at) <= $1
+        WHERE DATE(fecha_creacion) <= $1
       `;
       const totalUsersResult = await pool.query(totalUsersQuery, [date]);
-      const total_users = parseInt(totalUsersResult.rows[0].count);
+      const total_users = parseInt(totalUsersResult.rows[0].count) || 0;
 
       // 2. Nuevos registros del día
       const newRegistrationsQuery = `
         SELECT COUNT(*) as count 
         FROM usuarios 
-        WHERE DATE(created_at) = $1
+        WHERE DATE(fecha_creacion) = $1
       `;
       const newRegistrationsResult = await pool.query(newRegistrationsQuery, [date]);
-      const new_registrations = parseInt(newRegistrationsResult.rows[0].count);
+      const new_registrations = parseInt(newRegistrationsResult.rows[0].count) || 0;
 
       // 3. Usuarios activos (últimos 7 días)
       const activeUsers7dQuery = `
@@ -34,7 +34,7 @@ const MetricsCalculator = {
         AND DATE(created_at) BETWEEN $1::date - INTERVAL '6 days' AND $1::date
       `;
       const activeUsers7dResult = await pool.query(activeUsers7dQuery, [date]);
-      const active_users_7d = parseInt(activeUsers7dResult.rows[0].count);
+      const active_users_7d = parseInt(activeUsers7dResult.rows[0].count) || 0;
 
       // 4. Usuarios activos (últimos 30 días)
       const activeUsers30dQuery = `
@@ -44,7 +44,7 @@ const MetricsCalculator = {
         AND DATE(created_at) BETWEEN $1::date - INTERVAL '29 days' AND $1::date
       `;
       const activeUsers30dResult = await pool.query(activeUsers30dQuery, [date]);
-      const active_users_30d = parseInt(activeUsers30dResult.rows[0].count);
+      const active_users_30d = parseInt(activeUsers30dResult.rows[0].count) || 0;
 
       // 5. Usuarios con suscripción activa
       const paidUsersQuery = `
@@ -54,48 +54,51 @@ const MetricsCalculator = {
         AND (suscripcion_expira IS NULL OR suscripcion_expira > $1::date)
       `;
       const paidUsersResult = await pool.query(paidUsersQuery, [date]);
-      const paid_users = parseInt(paidUsersResult.rows[0].count);
+      const paid_users = parseInt(paidUsersResult.rows[0].count) || 0;
 
-      // 6. MRR (Monthly Recurring Revenue)
-      const mrr = paid_users * 11.99;
+      // 6. MRR (Monthly Recurring Revenue) - Asegurar que sea un número
+      const mrrCalculated = paid_users * 11.99;
+      const mrr = parseFloat(mrrCalculated) || 0;
 
       // 7. Búsquedas de jugadores del día
       const player_searches = await EventModel.countByType(
         'player_search', 
         `${date} 00:00:00`, 
         `${date} 23:59:59`
-      );
+      ) || 0;
 
       // 8. Análisis IA solicitados del día
       const ai_analyses = await EventModel.countByType(
         'ai_analysis_requested', 
         `${date} 00:00:00`, 
         `${date} 23:59:59`
-      );
+      ) || 0;
 
       // 9. Nuevas suscripciones del día
       const new_subscriptions = await EventModel.countByType(
         'subscription_activated', 
         `${date} 00:00:00`, 
         `${date} 23:59:59`
-      );
+      ) || 0;
 
       // 10. Suscripciones canceladas del día
       const cancelled_subscriptions = await EventModel.countByType(
         'subscription_cancelled', 
         `${date} 00:00:00`, 
         `${date} 23:59:59`
-      );
+      ) || 0;
 
-      // 11. Promedio de búsquedas por usuario activo
-      const avg_searches_per_user = active_users_7d > 0 ? 
+      // 11. Promedio de búsquedas por usuario activo - Proteger división por cero
+      const avg_searches_calculated = active_users_7d > 0 ? 
         (player_searches / active_users_7d) : 0;
+      const avg_searches_per_user = parseFloat(avg_searches_calculated) || 0;
 
-      // 12. Tasa de conversión (usuarios pagados / total usuarios)
-      const conversion_rate = total_users > 0 ? 
+      // 12. Tasa de conversión - Proteger división por cero
+      const conversion_calculated = total_users > 0 ? 
         (paid_users / total_users) : 0;
+      const conversion_rate = parseFloat(conversion_calculated) || 0;
 
-      // Guardar métricas calculadas
+      // Guardar métricas calculadas - Asegurar que todos los valores sean números
       const metricsData = {
         date,
         total_users,
@@ -103,13 +106,13 @@ const MetricsCalculator = {
         active_users_7d,
         active_users_30d,
         paid_users,
-        mrr: parseFloat(mrr.toFixed(2)),
+        mrr: parseFloat(mrr.toFixed(2)), // Ya sabemos que mrr es un número
         player_searches,
         ai_analyses,
         new_subscriptions,
         cancelled_subscriptions,
-        avg_searches_per_user: parseFloat(avg_searches_per_user.toFixed(2)),
-        conversion_rate: parseFloat(conversion_rate.toFixed(4))
+        avg_searches_per_user: parseFloat(avg_searches_per_user.toFixed(2)), // Ya es número
+        conversion_rate: parseFloat(conversion_rate.toFixed(4)) // Ya es número
       };
 
       const savedMetrics = await MetricModel.upsert(metricsData);
@@ -117,8 +120,8 @@ const MetricsCalculator = {
       console.log(`✅ Métricas calculadas para ${date}:`, {
         total_users,
         paid_users,
-        mrr: `$${mrr.toFixed(2)}`,
-        conversion_rate: `${(conversion_rate * 100).toFixed(2)}%`
+        mrr: `$${mrr.toFixed(2)}`, // mrr ya es número seguro
+        conversion_rate: `${(conversion_rate * 100).toFixed(2)}%` // conversion_rate ya es número seguro
       });
 
       return savedMetrics;
@@ -166,10 +169,13 @@ const MetricsCalculator = {
         return { error: 'Datos insuficientes para comparación' };
       }
 
-      // Calcular crecimientos
+      // Calcular crecimientos - Asegurar que los valores sean números
       const calculateGrowth = (current, previous) => {
-        if (previous === 0) return current > 0 ? 100 : 0;
-        return ((current - previous) / previous) * 100;
+        const currentNum = parseFloat(current) || 0;
+        const previousNum = parseFloat(previous) || 0;
+        
+        if (previousNum === 0) return currentNum > 0 ? 100 : 0;
+        return ((currentNum - previousNum) / previousNum) * 100;
       };
 
       return {

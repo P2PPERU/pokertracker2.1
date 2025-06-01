@@ -83,7 +83,7 @@ const Navbar = () => {
     { to: "/", label: "Inicio", always: true },
     { to: "/dashboard", label: "Generador EV", authOnly: true },
     { to: "/top-jugadores", label: "Top Jugadores", always: true },
-    { to: "/landing-analisis", label: "Análisis VIP", always: true, isNew: true }, // 🔥 NUEVO enlace público
+    { to: "/landing-analisis", label: "Promociones", always: true, isNew: true }, // 🔥 NUEVO enlace público
     { to: "/analisis-manos", label: "Análisis de Stats", always: true }, // Para usuarios VIP logueados
     { to: "/suscripciones", label: "Suscripciones", always: true },
     { to: "/favoritos", label: "Favoritos", authOnly: true },

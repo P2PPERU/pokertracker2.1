@@ -11,12 +11,6 @@ import {
   useColorModeValue,
   Icon,
   Badge,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   Spinner,
   Alert,
   AlertIcon,
@@ -28,14 +22,21 @@ import {
   CardBody,
   CardHeader,
   Flex,
-  Progress,
-  Tooltip,
-  Image,
   SimpleGrid,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  FormControl,
+  FormLabel,
+  Select,
+  Textarea,
+  FormErrorMessage
+
 } from '@chakra-ui/react';
 import {
   FaUpload,
@@ -43,46 +44,250 @@ import {
   FaClock,
   FaCheckCircle,
   FaDatabase,
-  FaInfoCircle,
-  FaStar,
-  FaDownload,
   FaWhatsapp,
-  FaMoneyBillWave,
-  FaTrophy,
-  FaUsers,
-  FaHandshake,
-  FaArrowRight,
-  FaPhoneAlt,
   FaGift,
-  FaFire,
-  FaChartLine,
   FaRocket,
   FaLock,
-  FaCrown
+  FaCrown,
+  FaEye,
+  FaRobot,
+  FaUser,
+  FaEnvelope,
+  FaGamepad,
+  FaStar,
+  FaUsers,
+  FaChartLine
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { gradients, brand } from '../theme/colors';
+import { keyframes } from '@emotion/react';
+
+// Componente Banner Marquee Animado
+const MarqueeBanner = () => {
+  const messages = [
+    {
+      icon: FaWhatsapp,
+      text: "¿Quieres análisis profesional inmediato? Contacta con nuestro equipo",
+      color: "#25D366"
+    },
+    {
+      icon: FaChartLine,
+      text: "Análisis personalizado de tus manos",
+      color: "#4066ED"
+    },
+    {
+      icon: FaUsers,
+      text: "Clubs VIP con rakeback 55%",
+      color: "#FFD700"
+    },
+    {
+      icon: FaStar,
+      text: "¡Mejora tu juego con estadísticas avanzadas!",
+      color: "#FF6B6B"
+    }
+  ];
+
+  const whatsappUrl = "https://wa.me/51991351213?text=🔥%20Hola!%20Quiero%20el%20combo%20completo:%20Premium%20+%20Clubs%20+%20Rakeback";
+
+  return (
+    <Box
+      as="a"
+      href={whatsappUrl}
+      target="_blank"
+      bg="linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%)"
+      color="white"
+      py={3}
+      overflow="hidden"
+      position="relative"
+      boxShadow="0 4px 15px rgba(0,0,0,0.1)"
+      borderRadius="lg"
+      mb={6}
+      cursor="pointer"
+      _hover={{ 
+        transform: "scale(1.02)",
+        boxShadow: "0 6px 20px rgba(0,0,0,0.15)"
+      }}
+      transition="all 0.3s ease"
+      textDecoration="none"
+      display="block"
+    >
+      <style>
+        {`
+          @keyframes marquee {
+            0% {
+              transform: translateX(100%);
+            }
+            100% {
+              transform: translateX(-100%);
+            }
+          }
+          
+          @keyframes shimmer {
+            0% {
+              transform: translateX(-100%);
+            }
+            100% {
+              transform: translateX(100%);
+            }
+          }
+          
+          @keyframes pulse {
+            0%, 100% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.1);
+            }
+          }
+          
+          .marquee-content {
+            animation: marquee 15s linear infinite;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+          }
+          
+          .pulse-icon {
+            animation: pulse 2s ease-in-out infinite;
+          }
+        `}
+      </style>
+      
+      {/* Efecto shimmer de fondo */}
+      <Box
+        position="absolute"
+        top="0"
+        left="0"
+        right="0"
+        bottom="0"
+        background="linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)"
+        sx={{
+          animation: 'shimmer 2s infinite linear'
+        }}
+      />
+      
+      <Box className="marquee-content" position="relative" zIndex="1">
+        <HStack spacing={8} align="center" minW="max-content">
+          {messages.map((message, index) => (
+            <HStack key={index} spacing={3} minW="fit-content">
+              <Icon 
+                as={message.icon} 
+                boxSize={5} 
+                color={message.color}
+                className="pulse-icon"
+                filter="drop-shadow(0 0 5px rgba(255,255,255,0.3))"
+              />
+              <Text 
+                fontSize="md" 
+                fontWeight="600"
+                textShadow="0 1px 3px rgba(0,0,0,0.3)"
+                minW="fit-content"
+              >
+                {message.text}
+              </Text>
+              <Box 
+                w="2px" 
+                h="20px" 
+                bg="whiteAlpha.600" 
+                borderRadius="full"
+                mx={4}
+              />
+            </HStack>
+          ))}
+          
+          {/* Texto de acción destacado */}
+          <HStack spacing={3} minW="fit-content" px={4}>
+            <Icon as={FaWhatsapp} boxSize={6} color="#25D366" className="pulse-icon" />
+            <Text fontSize="lg" fontWeight="bold" color="#FFD700" minW="fit-content">
+              🔥 CLICK AQUÍ para COMBO COMPLETO 🔥
+            </Text>
+          </HStack>
+
+          <Text fontSize="sm" fontWeight="bold" color="#25D366" minW="fit-content" px={4}>
+            📱 +51 991 351 213 • ✅ Respuesta en 5 min
+          </Text>
+          
+          {/* Repetimos los mensajes para que no haya espacios vacíos */}
+          {messages.map((message, index) => (
+            <HStack key={`repeat-${index}`} spacing={3} minW="fit-content">
+              <Box 
+                w="2px" 
+                h="20px" 
+                bg="whiteAlpha.600" 
+                borderRadius="full"
+                mx={4}
+              />
+              <Icon 
+                as={message.icon} 
+                boxSize={5} 
+                color={message.color}
+                className="pulse-icon"
+                filter="drop-shadow(0 0 5px rgba(255,255,255,0.3))"
+              />
+              <Text 
+                fontSize="md" 
+                fontWeight="600"
+                textShadow="0 1px 3px rgba(0,0,0,0.3)"
+                minW="fit-content"
+              >
+                {message.text}
+              </Text>
+            </HStack>
+          ))}
+        </HStack>
+      </Box>
+    </Box>
+  );
+};
 
 const AnalisisManos = () => {
+  // ✅ TODOS LOS HOOKS AL PRINCIPIO - ORDEN FIJO Y SIEMPRE LOS MISMOS
   const { auth } = useAuth();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
+  // Estados del componente - TODOS declarados siempre
   const [archivo, setArchivo] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [misArchivos, setMisArchivos] = useState([]);
   const [cargandoArchivos, setCargandoArchivos] = useState(true);
-  const toast = useToast();
+  const [selectedAnalysis, setSelectedAnalysis] = useState(null);
+  
+  // Estados del formulario - TODOS declarados siempre
+  const [formData, setFormData] = useState({
+    email: '',
+    sala: '',
+    nick: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
-  // Colores del tema
+  // TODOS los hooks de color - SIEMPRE en el mismo orden
   const pageBg = useColorModeValue("#F5F8FC", "gray.900");
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "gray.100");
   const subtextColor = useColorModeValue("gray.600", "gray.400");
+  const sectionBg = useColorModeValue("gray.50", "gray.700");
+  
+  // ✅ HOOKS PARA EL MODAL - Declarados aquí para evitar orden condicional
+  const modalBg = useColorModeValue("blue.50", "blue.900");
+  const modalBorderColor = useColorModeValue("blue.200", "blue.700");
+  const modalTextColor = useColorModeValue("gray.700", "gray.300");
+  
+  // ✅ HOOKS ADICIONALES para evitar ejecución condicional
+  const grayBg = useColorModeValue("gray.50", "gray.700");
+  const grayBorderColor = useColorModeValue("gray.200", "gray.600");
+  const grayHoverBg = useColorModeValue("gray.50", "gray.700");
+
+  // Variables calculadas DESPUÉS de todos los hooks
+  const esUsuarioVIP = auth && ["plata", "oro"].includes(auth?.suscripcion);
   const mainGradient = gradients.main;
   const whatsappGreen = "#25D366";
   const goldAccent = "#FFD700";
 
-  // URLs de WhatsApp optimizadas para conversión
+  // URLs de WhatsApp
   const whatsappUrls = {
     analisis: "https://wa.me/51991351213?text=🎯%20Hola!%20Quiero%20análisis%20profesional%20de%20mis%20manos%20de%20poker",
     clubs: "https://wa.me/51991351213?text=🃏%20Hola!%20Quiero%20info%20sobre%20clubs%20VIP%20con%20rakeback%20alto",
@@ -91,11 +296,9 @@ const AnalisisManos = () => {
     combo: "https://wa.me/51991351213?text=🔥%20Hola!%20Quiero%20el%20combo%20completo:%20Premium%20+%20Clubs%20+%20Rakeback"
   };
 
-  // Verificar que el usuario tenga suscripción VIP (solo para subir archivos)
-  const esUsuarioVIP = auth && ["plata", "oro"].includes(auth.suscripcion);
-
-  // Cargar archivos del usuario (solo si está autenticado y es VIP)
+  // Función para cargar archivos - useCallback SIEMPRE se ejecuta
   const cargarMisArchivos = useCallback(async () => {
+    // La lógica condicional va DENTRO de la función
     if (!esUsuarioVIP) {
       setCargandoArchivos(false);
       return;
@@ -117,13 +320,142 @@ const AnalisisManos = () => {
     } finally {
       setCargandoArchivos(false);
     }
-  }, [esUsuarioVIP, toast]);
+  }, [esUsuarioVIP, toast]); // Dependencias correctas
 
+  // Effect para cargar archivos - SIEMPRE se ejecuta
   useEffect(() => {
     cargarMisArchivos();
   }, [cargarMisArchivos]);
 
-  // Manejar selección de archivo
+  // TODAS las funciones después de todos los hooks
+  const openAnalysisModal = (analisis) => {
+    setSelectedAnalysis(analisis);
+    onOpen();
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.email.trim()) {
+      errors.email = 'El correo electrónico es obligatorio';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'El correo electrónico no es válido';
+    }
+    
+    if (!formData.sala.trim()) {
+      errors.sala = 'La sala es obligatoria';
+    }
+    
+    if (!formData.nick.trim()) {
+      errors.nick = 'El nick del jugador es obligatorio';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleFormChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const subirArchivoConFormulario = async () => {
+    if (!archivo) {
+      toast({
+        title: 'No hay archivo',
+        description: 'Por favor selecciona un archivo primero',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (!validateForm()) {
+      toast({
+        title: 'Formulario incompleto',
+        description: 'Por favor completa todos los campos obligatorios',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setSubiendo(true);
+
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const contenidoArchivo = e.target.result;
+          
+          const response = await api.post('/manos/subir', {
+            nombreArchivo: archivo.name,
+            contenidoArchivo: contenidoArchivo,
+            email: formData.email,
+            sala: formData.sala,
+            nick: formData.nick
+          });
+
+          toast({
+            title: 'Archivo subido exitosamente',
+            description: `${response.data.mensaje} Se enviará el análisis a ${formData.email}`,
+            status: 'success',
+            duration: 5000,
+            isClosable: true,
+          });
+
+          // Limpiar formulario y archivo
+          setArchivo(null);
+          setFormData({ email: '', sala: '', nick: '' });
+          document.getElementById('file-input').value = '';
+          cargarMisArchivos();
+
+        } catch (error) {
+          console.error('Error subiendo archivo:', error);
+          toast({
+            title: 'Error al subir archivo',
+            description: error.response?.data?.error || 'Error interno',
+            status: 'error',
+            duration: 4000,
+            isClosable: true,
+          });
+        } finally {
+          setSubiendo(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast({
+          title: 'Error leyendo archivo',
+          description: 'No se pudo leer el contenido del archivo',
+          status: 'error',
+          duration: 4000,
+          isClosable: true,
+        });
+        setSubiendo(false);
+      };
+
+      reader.readAsText(archivo);
+
+    } catch (error) {
+      console.error('Error en subir archivo:', error);
+      setSubiendo(false);
+    }
+  };
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) {
@@ -161,79 +493,6 @@ const AnalisisManos = () => {
     setArchivo(file);
   };
 
-  // Subir archivo
-  const subirArchivo = async () => {
-    if (!archivo) {
-      toast({
-        title: 'No hay archivo',
-        description: 'Por favor selecciona un archivo primero',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    setSubiendo(true);
-
-    try {
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
-        try {
-          const contenidoArchivo = e.target.result;
-          
-          const response = await api.post('/manos/subir', {
-            nombreArchivo: archivo.name,
-            contenidoArchivo: contenidoArchivo
-          });
-
-          toast({
-            title: 'Archivo subido exitosamente',
-            description: response.data.mensaje,
-            status: 'success',
-            duration: 5000,
-            isClosable: true,
-          });
-
-          setArchivo(null);
-          document.getElementById('file-input').value = '';
-          cargarMisArchivos();
-
-        } catch (error) {
-          console.error('Error subiendo archivo:', error);
-          toast({
-            title: 'Error al subir archivo',
-            description: error.response?.data?.error || 'Error interno',
-            status: 'error',
-            duration: 4000,
-            isClosable: true,
-          });
-        } finally {
-          setSubiendo(false);
-        }
-      };
-
-      reader.onerror = () => {
-        toast({
-          title: 'Error leyendo archivo',
-          description: 'No se pudo leer el contenido del archivo',
-          status: 'error',
-          duration: 4000,
-          isClosable: true,
-        });
-        setSubiendo(false);
-      };
-
-      reader.readAsText(archivo);
-
-    } catch (error) {
-      console.error('Error en subir archivo:', error);
-      setSubiendo(false);
-    }
-  };
-
-  // Formatear fecha
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -244,18 +503,49 @@ const AnalisisManos = () => {
     });
   };
 
-  // Obtener badge de estado
   const obtenerBadgeEstado = (estado) => {
     switch (estado) {
       case 'pendiente':
-        return <Badge colorScheme="yellow" leftIcon={<FaClock />}>Pendiente</Badge>;
+        return (
+          <HStack spacing={1}>
+            <Icon as={FaClock} boxSize={3} />
+            <Badge colorScheme="yellow" px={2} py={1}>Pendiente</Badge>
+          </HStack>
+        );
       case 'analizado':
-        return <Badge colorScheme="green" leftIcon={<FaCheckCircle />}>Completado</Badge>;
+        return (
+          <HStack spacing={1}>
+            <Icon as={FaCheckCircle} boxSize={3} />
+            <Badge colorScheme="green" px={2} py={1}>Completado</Badge>
+          </HStack>
+        );
       default:
-        return <Badge colorScheme="gray">{estado}</Badge>;
+        return <Badge colorScheme="gray" px={2} py={1}>{estado}</Badge>;
     }
   };
 
+  const getAnalysisPreview = (analisis) => {
+    if (!analisis) return "Análisis no disponible";
+    
+    const lines = analisis.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return "Análisis completado";
+    
+    const meaningfulLine = lines.find(line => 
+      line.length > 20 && 
+      !line.includes('🎯') && 
+      !line.includes('Informe sobre')
+    );
+    
+    if (meaningfulLine) {
+      return meaningfulLine.length > 80 ? 
+        meaningfulLine.substring(0, 80) + "..." : 
+        meaningfulLine;
+    }
+    
+    return "Análisis de poker completado - Click para ver detalles";
+  };
+
+  // TODOS los renders condicionales VAN AL FINAL, después de todos los hooks
   return (
     <Box minH="100vh" bg={pageBg} p={4}>
       <Container maxW="6xl" mx="auto">
@@ -265,7 +555,7 @@ const AnalisisManos = () => {
           borderRadius="xl" 
           py={4} 
           px={6} 
-          mb={6}
+          mb={4}
           boxShadow="lg"
         >
           <Flex justifyContent="space-between" alignItems="center">
@@ -304,7 +594,58 @@ const AnalisisManos = () => {
           </Text>
         </Box>
 
-        {/* Mostrar contenido según el estado del usuario */}
+        {/* Banner promocional animado horizontal - REEMPLAZADO */}
+        <MarqueeBanner />
+
+        {/* Modal para análisis completo */}
+        <Modal isOpen={isOpen} onClose={onClose} size="6xl" scrollBehavior="inside">
+          <ModalOverlay bg="blackAlpha.800" />
+          <ModalContent maxH="90vh">
+            <ModalHeader>
+              <HStack spacing={3}>
+                <Icon as={FaEye} color="blue.500" />
+                <Text>Análisis Detallado</Text>
+              </HStack>
+            </ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Box 
+                bg={modalBg} 
+                p={6} 
+                borderRadius="lg"
+                border="1px solid"
+                borderColor={modalBorderColor}
+              >
+                <VStack align="start" spacing={4}>
+                  <HStack spacing={2}>
+                    <Icon as={FaRobot} color="blue.600" />
+                    <Text fontWeight="bold" color="blue.600" fontSize="lg">
+                      Análisis Profesional de Manos
+                    </Text>
+                  </HStack>
+                  
+                  <Divider />
+                  
+                  <Text 
+                    fontSize="md" 
+                    lineHeight="1.8" 
+                    whiteSpace="pre-wrap"
+                    color={modalTextColor}
+                  >
+                    {selectedAnalysis}
+                  </Text>
+                </VStack>
+              </Box>
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="blue" onClick={onClose}>
+                Cerrar
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Contenido principal */}
         {!auth ? (
           // Usuario no autenticado - mostrar página promocional
           <VStack spacing={8}>
@@ -318,7 +659,6 @@ const AnalisisManos = () => {
               </Box>
             </Alert>
 
-            {/* CTA para registro */}
             <Card textAlign="center" p={8} boxShadow="xl">
               <CardBody>
                 <VStack spacing={6}>
@@ -340,7 +680,7 @@ const AnalisisManos = () => {
                       const event = new CustomEvent("abrir-modal-login");
                       window.dispatchEvent(event);
                     }}
-                    rightIcon={<FaArrowRight />}
+                    rightIcon={<FaRocket />}
                   >
                     Registrarse Ahora
                   </Button>
@@ -349,7 +689,6 @@ const AnalisisManos = () => {
             </Card>
           </VStack>
         ) : (
-          // Usuarios autenticados (TODOS pueden ver la interfaz, pero solo VIP pueden subir)
           <Flex direction={{ base: "column", lg: "row" }} gap={6}>
             {/* Panel izquierdo - Subir archivo */}
             <Box flex="1">
@@ -367,7 +706,6 @@ const AnalisisManos = () => {
                 </CardHeader>
                 <CardBody>
                   <VStack spacing={4} align="stretch">
-                    {/* Mostrar alerta para usuarios bronce */}
                     {!esUsuarioVIP && (
                       <Alert status="warning" borderRadius="md">
                         <AlertIcon />
@@ -379,14 +717,70 @@ const AnalisisManos = () => {
                         </Box>
                       </Alert>
                     )}
-                    
-                    <Alert status="info" borderRadius="md">
-                      <AlertIcon />
-                      <Box fontSize="sm">
-                        <Text fontWeight="bold">Formatos aceptados:</Text>
-                        <Text>.txt, .log, .hh, .xml (máximo 5MB)</Text>
+
+                    {/* Formulario obligatorio */}
+                    {esUsuarioVIP && (
+                      <Box bg={sectionBg} p={4} borderRadius="md">
+                        <Text fontWeight="bold" mb={3} color={textColor}>
+                          📋 Información del Jugador (Obligatorio)
+                        </Text>
+                        
+                        <VStack spacing={3}>
+                          <FormControl isInvalid={!!formErrors.email}>
+                            <FormLabel>
+                              <Icon as={FaEnvelope} mr={1} />
+                              Correo Electrónico
+                            </FormLabel>
+                            <Input
+                              type="email"
+                              placeholder="tu@email.com"
+                              value={formData.email}
+                              onChange={(e) => handleFormChange('email', e.target.value)}
+                            />
+                            <FormErrorMessage>{formErrors.email}</FormErrorMessage>
+                          </FormControl>
+
+                          <FormControl isInvalid={!!formErrors.sala}>
+                            <FormLabel>
+                              <Icon as={FaGamepad} mr={1} />
+                              Sala de Poker
+                            </FormLabel>
+                            <Select
+                              placeholder="Selecciona tu sala"
+                              value={formData.sala}
+                              onChange={(e) => handleFormChange('sala', e.target.value)}
+                            >
+                              <option value="pokerstars">PokerStars</option>
+                              <option value="X-Poker">X-Poker</option>
+                              <option value="ggpoker">GGPoker</option>
+                              <option value="partypoker">PartyPoker</option>
+                              <option value="888poker">888poker</option>
+                              <option value="winamax">Winamax</option>
+                              <option value="ignition">Ignition</option>
+                              <option value="bovada">Bovada</option>
+                              <option value="acr">Americas Cardroom</option>
+                              <option value="PPPoker">PPPoker</option>
+                              <option value="Suprema">Suprema</option>
+                              <option value="otros">Otros</option>
+                            </Select>
+                            <FormErrorMessage>{formErrors.sala}</FormErrorMessage>
+                          </FormControl>
+
+                          <FormControl isInvalid={!!formErrors.nick}>
+                            <FormLabel>
+                              <Icon as={FaUser} mr={1} />
+                              Nick del Jugador
+                            </FormLabel>
+                            <Input
+                              placeholder="Tu nickname en la sala"
+                              value={formData.nick}
+                              onChange={(e) => handleFormChange('nick', e.target.value)}
+                            />
+                            <FormErrorMessage>{formErrors.nick}</FormErrorMessage>
+                          </FormControl>
+                        </VStack>
                       </Box>
-                    </Alert>
+                    )}
                     
                     <Input
                       id="file-input"
@@ -400,7 +794,7 @@ const AnalisisManos = () => {
                     {archivo && esUsuarioVIP && (
                       <Box 
                         p={3} 
-                        bg={useColorModeValue("gray.50", "gray.700")} 
+                        bg={grayBg} 
                         borderRadius="md"
                       >
                         <HStack>
@@ -416,12 +810,23 @@ const AnalisisManos = () => {
                         </HStack>
                       </Box>
                     )}
+
+                    {/* Formatos aceptados */}
+                    {esUsuarioVIP && (
+                      <Alert status="info" borderRadius="md">
+                        <AlertIcon />
+                        <Box fontSize="sm">
+                          <Text fontWeight="bold">Formatos aceptados:</Text>
+                          <Text>.txt, .log, .hh, .xml (máximo 5MB)</Text>
+                        </Box>
+                      </Alert>
+                    )}
                     
                     {esUsuarioVIP ? (
                       <Button
                         colorScheme="blue"
                         size="lg"
-                        onClick={subirArchivo}
+                        onClick={subirArchivoConFormulario}
                         isLoading={subiendo}
                         loadingText="Subiendo..."
                         disabled={!archivo || subiendo}
@@ -449,14 +854,13 @@ const AnalisisManos = () => {
                         </AlertTitle>
                         <AlertDescription>
                           {esUsuarioVIP 
-                            ? "Tu archivo será analizado manualmente por nuestro equipo en PokerTracker. El tiempo estimado es de 24-48 horas."
+                            ? "Tu archivo será analizado manualmente por nuestro equipo en PokerTracker. El análisis se enviará a tu correo en 24-48 horas."
                             : "Con una suscripción VIP, nuestro equipo analizará tus manos manualmente y te dará recomendaciones específicas para mejorar."
                           }
                         </AlertDescription>
                       </Box>
                     </Alert>
                     
-                    {/* CTA para upgrade si es bronce */}
                     {!esUsuarioVIP && (
                       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                         <Button
@@ -534,7 +938,6 @@ const AnalisisManos = () => {
                 </CardHeader>
                 <CardBody>
                   {!esUsuarioVIP ? (
-                    // Vista para usuarios bronce
                     <Box textAlign="center" py={8}>
                       <Icon as={FaLock} boxSize={16} color="gray.400" mb={4} />
                       <Heading size="md" color={textColor} mb={4}>
@@ -585,8 +988,8 @@ const AnalisisManos = () => {
                           p={4}
                           borderWidth="1px"
                           borderRadius="md"
-                          borderColor={useColorModeValue("gray.200", "gray.600")}
-                          _hover={{ bg: useColorModeValue("gray.50", "gray.700") }}
+                          borderColor={grayBorderColor}
+                          _hover={{ bg: grayHoverBg }}
                           transition="all 0.2s"
                         >
                           <Flex justify="space-between" align="start" mb={2}>
@@ -611,19 +1014,26 @@ const AnalisisManos = () => {
                           {archivo.analisis_admin && (
                             <>
                               <Divider my={3} />
-                              <Box 
-                                p={3} 
-                                bg={useColorModeValue("green.50", "green.900")} 
-                                borderRadius="md"
-                                border="1px solid"
-                                borderColor={useColorModeValue("green.200", "green.700")}
-                              >
-                                <Text fontSize="sm" fontWeight="bold" color="green.600" mb={2}>
-                                  📊 Análisis Completado:
+                              <Box bg={sectionBg} p={4} borderRadius="md">
+                                <HStack spacing={2} mb={2}>
+                                  <Icon as={FaRobot} color="green.500" boxSize={4} />
+                                  <Text fontWeight="semibold" color="green.600">
+                                    Análisis Completado:
+                                  </Text>
+                                </HStack>
+                                
+                                <Text fontSize="sm" color="gray.600" mb={3}>
+                                  {getAnalysisPreview(archivo.analisis_admin)}
                                 </Text>
-                                <Text fontSize="sm" whiteSpace="pre-line">
-                                  {archivo.analisis_admin}
-                                </Text>
+                                
+                                <Button
+                                  size="sm"
+                                  colorScheme="blue"
+                                  onClick={() => openAnalysisModal(archivo.analisis_admin)}
+                                  leftIcon={<FaEye />}
+                                >
+                                  Ver análisis completo
+                                </Button>
                               </Box>
                             </>
                           )}
@@ -637,7 +1047,7 @@ const AnalisisManos = () => {
           </Flex>
         )}
 
-        {/* Sección promocional para todos (al final) */}
+        {/* Sección promocional */}
         <Box mt={12}>
           <Card textAlign="center" p={8} boxShadow="xl" bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" color="white">
             <CardBody>

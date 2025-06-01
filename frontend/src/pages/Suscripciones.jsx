@@ -33,8 +33,8 @@ const planes = [
   },
   {
     nombre: "Plata",
-    precio: "$9.99 / mes",
-    precioAnterior: "$20",
+    precio: "$11.99 / mes",
+    precioAnterior: "$24",
     descuento: "50% OFF",
     icono: FaMedal,
     beneficios: [

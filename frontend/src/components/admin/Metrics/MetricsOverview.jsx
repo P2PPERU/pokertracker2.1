@@ -15,9 +15,46 @@ import {
 } from '@chakra-ui/react';
 import { useAdminMetrics } from '../../../hooks/admin/useAdminMetrics';
 
+// Funciones helper para manejar números de forma segura
+const safeToFixed = (value, decimals = 2) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? '0' : num.toFixed(decimals);
+};
+
+const safeNumber = (value) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+};
+
 const MetricsOverview = () => {
   const { metrics, loading } = useAdminMetrics();
   const cardBg = useColorModeValue("white", "gray.800");
+  const sectionBg = useColorModeValue("gray.50", "gray.700");
+
+  // Normalizar métricas para evitar errores
+  const safeMetrics = {
+    users: {
+      total_users: safeNumber(metrics?.users?.total_users || 0),
+      activeUsers: safeNumber(metrics?.users?.activeUsers || 0),
+      new_registrations: safeNumber(metrics?.users?.new_registrations || 0),
+      conversionRate: safeNumber(metrics?.users?.conversionRate || 0)
+    },
+    financial: {
+      mrr: safeNumber(metrics?.financial?.mrr || 0),
+      totalRevenue: safeNumber(metrics?.financial?.totalRevenue || (metrics?.financial?.mrr || 0) * 12),
+      arpu: safeNumber(metrics?.financial?.arpu || 0)
+    },
+    usage: {
+      ai_analyses: safeNumber(metrics?.usage?.ai_analyses || 0),
+      avg_searches_per_user: safeNumber(metrics?.usage?.avg_searches_per_user || 0)
+    },
+    growth: {
+      mrr: safeNumber(metrics?.growth?.mrr || 0),
+      active_users_7d: safeNumber(metrics?.growth?.active_users_7d || 0),
+      conversion_rate: safeNumber(metrics?.growth?.conversion_rate || 0),
+      ai_analyses: safeNumber(metrics?.growth?.ai_analyses || 0)
+    }
+  };
 
   return (
     <Box 
@@ -39,12 +76,12 @@ const MetricsOverview = () => {
         <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
           <Stat>
             <StatLabel>MRR (Ingresos Mensuales)</StatLabel>
-            <StatNumber>${metrics.financial.mrr.toFixed(2)}</StatNumber>
+            <StatNumber>${safeToFixed(safeMetrics.financial.mrr, 2)}</StatNumber>
             <StatHelpText>
-              {metrics.growth.mrr !== undefined && (
+              {safeMetrics.growth.mrr !== 0 && (
                 <>
-                  <StatArrow type={metrics.growth.mrr > 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(metrics.growth.mrr).toFixed(1)}%
+                  <StatArrow type={safeMetrics.growth.mrr > 0 ? 'increase' : 'decrease'} />
+                  {safeToFixed(Math.abs(safeMetrics.growth.mrr), 1)}%
                 </>
               )}
             </StatHelpText>
@@ -52,24 +89,24 @@ const MetricsOverview = () => {
           
           <Stat>
             <StatLabel>ARR (Proyección Anual)</StatLabel>
-            <StatNumber>${metrics.financial.totalRevenue.toFixed(0)}</StatNumber>
+            <StatNumber>${safeToFixed(safeMetrics.financial.totalRevenue, 0)}</StatNumber>
             <StatHelpText>Basado en MRR actual</StatHelpText>
           </Stat>
           
           <Stat>
             <StatLabel>ARPU (Ingreso por Usuario)</StatLabel>
-            <StatNumber>${metrics.financial.arpu.toFixed(2)}</StatNumber>
+            <StatNumber>${safeToFixed(safeMetrics.financial.arpu, 2)}</StatNumber>
             <StatHelpText>Promedio mensual</StatHelpText>
           </Stat>
           
           <Stat>
             <StatLabel>Tasa de Conversión</StatLabel>
-            <StatNumber>{metrics.users.conversionRate.toFixed(1)}%</StatNumber>
+            <StatNumber>{safeToFixed(safeMetrics.users.conversionRate, 1)}%</StatNumber>
             <StatHelpText>
-              {metrics.growth.conversion_rate !== undefined && (
+              {safeMetrics.growth.conversion_rate !== 0 && (
                 <>
-                  <StatArrow type={metrics.growth.conversion_rate > 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(metrics.growth.conversion_rate).toFixed(1)}%
+                  <StatArrow type={safeMetrics.growth.conversion_rate > 0 ? 'increase' : 'decrease'} />
+                  {safeToFixed(Math.abs(safeMetrics.growth.conversion_rate), 1)}%
                 </>
               )}
             </StatHelpText>
@@ -85,12 +122,12 @@ const MetricsOverview = () => {
         <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
           <Stat>
             <StatLabel>Usuarios Activos (7d)</StatLabel>
-            <StatNumber>{metrics.users.activeUsers}</StatNumber>
+            <StatNumber>{safeMetrics.users.activeUsers}</StatNumber>
             <StatHelpText>
-              {metrics.growth.active_users_7d !== undefined && (
+              {safeMetrics.growth.active_users_7d !== 0 && (
                 <>
-                  <StatArrow type={metrics.growth.active_users_7d > 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(metrics.growth.active_users_7d).toFixed(1)}%
+                  <StatArrow type={safeMetrics.growth.active_users_7d > 0 ? 'increase' : 'decrease'} />
+                  {safeToFixed(Math.abs(safeMetrics.growth.active_users_7d), 1)}%
                 </>
               )}
             </StatHelpText>
@@ -98,24 +135,24 @@ const MetricsOverview = () => {
           
           <Stat>
             <StatLabel>Nuevos Registros</StatLabel>
-            <StatNumber>{metrics.users.new_registrations}</StatNumber>
+            <StatNumber>{safeMetrics.users.new_registrations}</StatNumber>
             <StatHelpText>Hoy</StatHelpText>
           </Stat>
           
           <Stat>
             <StatLabel>Búsquedas por Usuario</StatLabel>
-            <StatNumber>{metrics.usage.avg_searches_per_user.toFixed(1)}</StatNumber>
+            <StatNumber>{safeToFixed(safeMetrics.usage.avg_searches_per_user, 1)}</StatNumber>
             <StatHelpText>Promedio diario</StatHelpText>
           </Stat>
           
           <Stat>
             <StatLabel>Análisis IA Solicitados</StatLabel>
-            <StatNumber>{metrics.usage.ai_analyses}</StatNumber>
+            <StatNumber>{safeMetrics.usage.ai_analyses}</StatNumber>
             <StatHelpText>
-              {metrics.growth.ai_analyses !== undefined && (
+              {safeMetrics.growth.ai_analyses !== 0 && (
                 <>
-                  <StatArrow type={metrics.growth.ai_analyses > 0 ? 'increase' : 'decrease'} />
-                  {Math.abs(metrics.growth.ai_analyses).toFixed(1)}%
+                  <StatArrow type={safeMetrics.growth.ai_analyses > 0 ? 'increase' : 'decrease'} />
+                  {safeToFixed(Math.abs(safeMetrics.growth.ai_analyses), 1)}%
                 </>
               )}
             </StatHelpText>
@@ -124,31 +161,36 @@ const MetricsOverview = () => {
       </Box>
 
       {/* Indicadores de salud del negocio */}
-      <Box mt={6} p={4} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="lg">
+      <Box mt={6} p={4} bg={sectionBg} borderRadius="lg">
         <Text fontWeight="bold" mb={2}>🎯 Indicadores Clave:</Text>
         <Flex wrap="wrap" gap={2}>
           <Badge 
-            colorScheme={metrics.users.conversionRate > 5 ? "green" : "orange"}
+            colorScheme={safeMetrics.users.conversionRate > 5 ? "green" : "orange"}
             p={2}
             borderRadius="md"
           >
-            Conversión: {metrics.users.conversionRate.toFixed(1)}%
+            Conversión: {safeToFixed(safeMetrics.users.conversionRate, 1)}%
           </Badge>
           
           <Badge 
-            colorScheme={metrics.financial.mrr > 1000 ? "green" : "blue"}
+            colorScheme={safeMetrics.financial.mrr > 1000 ? "green" : "blue"}
             p={2}
             borderRadius="md"
           >
-            MRR: ${metrics.financial.mrr.toFixed(0)}
+            MRR: ${safeToFixed(safeMetrics.financial.mrr, 0)}
           </Badge>
           
           <Badge 
-            colorScheme={metrics.users.activeUsers > metrics.users.total_users * 0.3 ? "green" : "orange"}
+            colorScheme={safeMetrics.users.activeUsers > safeMetrics.users.total_users * 0.3 ? "green" : "orange"}
             p={2}
             borderRadius="md"
           >
-            Engagement: {((metrics.users.activeUsers / metrics.users.total_users) * 100 || 0).toFixed(1)}%
+            Engagement: {safeToFixed(
+              safeMetrics.users.total_users > 0 
+                ? (safeMetrics.users.activeUsers / safeMetrics.users.total_users) * 100 
+                : 0, 
+              1
+            )}%
           </Badge>
         </Flex>
       </Box>
