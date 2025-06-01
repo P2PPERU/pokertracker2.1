@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import api from '../../services/api';
 
-export const useAdminMetrics = (usuarios = []) => {
+export const useAdminMetrics = () => {
   const [metrics, setMetrics] = useState({
     financial: {
       mrr: 0,
@@ -14,65 +15,99 @@ export const useAdminMetrics = (usuarios = []) => {
       retentionRate: 0,
       conversionRate: 0,
       activeUsers: 0,
-      upgradeRate: 0
-    }
+      upgradeRate: 0,
+      total_users: 0,
+      new_registrations: 0,
+      paid_users: 0
+    },
+    usage: {
+      player_searches: 0,
+      ai_analyses: 0,
+      avg_searches_per_user: 0
+    },
+    growth: {}
   });
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (usuarios.length > 0) {
-      calculateMetrics();
-    }
-  }, [usuarios]);
+    fetchMetrics();
+  }, []);
 
-  const calculateMetrics = () => {
-    // 💰 MÉTRICAS FINANCIERAS
-    const oroUsers = usuarios.filter(u => u.suscripcion === 'oro').length;
-    const plataUsers = usuarios.filter(u => u.suscripcion === 'plata').length;
-    
-    // Precios por plan (ajusta según tus precios reales)
-    const PRECIOS = {
-      oro: 19.99,
-      plata: 9.99,
-      bronce: 0
-    };
-
-    const mrrOro = oroUsers * PRECIOS.oro;
-    const mrrPlata = plataUsers * PRECIOS.plata;
-    const totalMRR = mrrOro + mrrPlata;
-    const totalRevenue = totalMRR * 12; // ARR
-    const arpu = usuarios.length > 0 ? totalMRR / usuarios.length : 0;
-
-    // 👥 MÉTRICAS DE USUARIOS
-    const totalUsers = usuarios.length;
-    const paidUsers = oroUsers + plataUsers;
-    const conversionRate = totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0;
-    const upgradeRate = plataUsers > 0 ? (oroUsers / plataUsers) * 100 : 0;
-
-    // Calcular churn (usuarios con suscripción expirada)
-    const now = new Date();
-    const expiredUsers = usuarios.filter(u => 
-      u.suscripcion_expira && new Date(u.suscripcion_expira) < now
-    ).length;
-    const churnRate = paidUsers > 0 ? (expiredUsers / paidUsers) * 100 : 0;
-    const retentionRate = 100 - churnRate;
-
-    setMetrics({
-      financial: {
-        mrr: totalMRR,
-        totalRevenue: totalRevenue,
-        revenueByPlan: { oro: mrrOro, plata: mrrPlata },
-        mrrGrowth: 12.5, // Esto lo calcularías con datos históricos
-        arpu: arpu
-      },
-      users: {
-        churnRate: churnRate,
-        retentionRate: retentionRate,
-        conversionRate: conversionRate,
-        activeUsers: totalUsers,
-        upgradeRate: upgradeRate
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      
+      // Obtener métricas del dashboard
+      const dashboardResponse = await api.get('/admin/metrics-dashboard');
+      const dashboardData = dashboardResponse.data;
+      
+      if (dashboardData.success) {
+        const currentMetrics = dashboardData.metrics;
+        const growthData = dashboardData.growth || {};
+        
+        // Transformar datos para el formato esperado
+        setMetrics({
+          financial: {
+            mrr: currentMetrics.mrr || 0,
+            totalRevenue: (currentMetrics.mrr || 0) * 12,
+            revenueByPlan: {
+              oro: Math.round((currentMetrics.paid_users || 0) * 0.4 * 19.99), // Estimación
+              plata: Math.round((currentMetrics.paid_users || 0) * 0.6 * 11.99)
+            },
+            mrrGrowth: growthData.mrr || 0,
+            arpu: currentMetrics.total_users > 0 ? 
+              (currentMetrics.mrr / currentMetrics.total_users) : 0
+          },
+          users: {
+            total_users: currentMetrics.total_users || 0,
+            new_registrations: currentMetrics.new_registrations || 0,
+            paid_users: currentMetrics.paid_users || 0,
+            activeUsers: currentMetrics.active_users_7d || 0,
+            conversionRate: (currentMetrics.conversion_rate || 0) * 100,
+            churnRate: Math.max(0, 100 - ((currentMetrics.active_users_7d || 0) / (currentMetrics.total_users || 1)) * 100),
+            retentionRate: ((currentMetrics.active_users_7d || 0) / (currentMetrics.total_users || 1)) * 100,
+            upgradeRate: growthData.paid_users || 0
+          },
+          usage: {
+            player_searches: currentMetrics.player_searches || 0,
+            ai_analyses: currentMetrics.ai_analyses || 0,
+            avg_searches_per_user: currentMetrics.avg_searches_per_user || 0
+          },
+          growth: growthData
+        });
       }
-    });
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching metrics:', err);
+      setError('Error al cargar métricas');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return { metrics };
+  const refreshMetrics = async () => {
+    await fetchMetrics();
+  };
+
+  const calculateMetrics = async (date = null) => {
+    try {
+      await api.post('/admin/calculate-metrics', { date });
+      await fetchMetrics(); // Recargar después de calcular
+      return { success: true };
+    } catch (err) {
+      console.error('Error calculating metrics:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  return { 
+    metrics, 
+    loading, 
+    error, 
+    refreshMetrics, 
+    calculateMetrics 
+  };
 };

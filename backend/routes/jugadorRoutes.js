@@ -13,6 +13,9 @@ const {
 const pool = require("../config/db");
 const { verificarToken } = require("../middleware/authMiddleware");
 
+// 📊 NUEVO: Importar EventLogger para tracking específico
+const { EventLogger } = require("../utils/eventLogger");
+
 // ✅ Proteger la mayoría de rutas con verificarToken donde sea necesario
 
 // Ruta protegida para obtener datos del jugador
@@ -125,6 +128,15 @@ router.get("/jugador/:sala/:nombre/analisis", verificarToken, async (req, res) =
       "INSERT INTO analisis_ia_logs (usuario_id, jugador_nombre, sala) VALUES ($1, $2, $3)",
       [usuarioId, nombre, sala]
     );
+
+    // 📊 NUEVO: Trackear solicitud de análisis IA
+    EventLogger.aiAnalysisRequested(usuarioId, {
+      player_name: nombre,
+      sala: sala,
+      suscripcion: suscripcion,
+      solicitudes_restantes: solicitudesRestantes - 1,
+      from_cache: false
+    }, req).catch(console.error);
 
     res.json({
       analisis: nuevoAnalisis,

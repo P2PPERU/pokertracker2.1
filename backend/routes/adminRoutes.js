@@ -3,6 +3,10 @@ const router = express.Router();
 const pool = require("../config/db");
 const { verificarToken, verificarAdmin } = require("../middleware/authMiddleware");
 
+// 📊 NUEVO: Importar controladores de métricas
+const MetricController = require("../controllers/metricController");
+const EventController = require("../controllers/eventController");
+
 // ✅ Obtener lista de todos los usuarios con conteo de solicitudes IA usadas
 router.get("/usuarios", verificarToken, verificarAdmin, async (req, res) => {
   try {
@@ -53,15 +57,15 @@ router.put("/usuarios/:id/expiracion", verificarToken, verificarAdmin, async (re
 
 // ✅ Eliminar usuario
 router.delete("/usuario/:id", verificarToken, verificarAdmin, async (req, res) => {
-    const { id } = req.params;
-    try {
-      await pool.query("DELETE FROM usuarios WHERE id = $1", [id]);
-      res.json({ mensaje: "Usuario eliminado correctamente" });
-    } catch (error) {
-      console.error("❌ Error al eliminar usuario:", error);
-      res.status(500).json({ error: "Error interno al eliminar usuario" });
-    }
-  });
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM usuarios WHERE id = $1", [id]);
+    res.json({ mensaje: "Usuario eliminado correctamente" });
+  } catch (error) {
+    console.error("❌ Error al eliminar usuario:", error);
+    res.status(500).json({ error: "Error interno al eliminar usuario" });
+  }
+});
 
 // ✅ Bloquear o desbloquear usuario (campo activo opcional)
 router.put("/usuarios/:id/bloquear", verificarToken, verificarAdmin, async (req, res) => {
@@ -76,5 +80,33 @@ router.put("/usuarios/:id/bloquear", verificarToken, verificarAdmin, async (req,
     res.status(500).json({ error: "Error interno al actualizar estado del usuario" });
   }
 });
+
+// 📊 NUEVOS ENDPOINTS DE MÉTRICAS PARA ADMIN
+
+// Dashboard principal de métricas
+router.get("/metrics-dashboard", verificarToken, verificarAdmin, MetricController.getDashboardMetrics);
+
+// Métricas históricas
+router.get("/metrics-historical", verificarToken, verificarAdmin, MetricController.getHistoricalMetrics);
+
+// Métricas financieras específicas
+router.get("/metrics-financial", verificarToken, verificarAdmin, MetricController.getFinancialMetrics);
+
+// Calcular métricas manualmente
+router.post("/calculate-metrics", verificarToken, verificarAdmin, MetricController.calculateMetrics);
+
+// Recalcular todas las métricas
+router.post("/recalculate-metrics", verificarToken, verificarAdmin, MetricController.recalculateAllMetrics);
+
+// 📊 ENDPOINTS DE EVENTOS PARA ADMIN
+
+// Estadísticas de eventos
+router.get("/events-stats", verificarToken, verificarAdmin, EventController.getEventStats);
+
+// Eventos por tipo
+router.get("/events/:eventType", verificarToken, verificarAdmin, EventController.getEventsByType);
+
+// Limpiar eventos antiguos
+router.delete("/events-cleanup", verificarToken, verificarAdmin, EventController.cleanOldEvents);
 
 module.exports = router;
