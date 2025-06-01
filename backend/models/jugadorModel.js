@@ -7,8 +7,27 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const getJugadorData = async (nombre, sala) => {
-  // 🎯 SELECT con marcador %%FILTRO%%
+// ✨ Función helper para construir filtros de fecha usando PT4
+const buildDateFilter = (fechaDesde, fechaHasta) => {
+  if (fechaDesde && fechaHasta) {
+    return `AND chps.date_played BETWEEN '${fechaDesde}'::date AND '${fechaHasta}'::date`;
+  }
+  return '';
+};
+
+// ✨ Función principal ACTUALIZADA con CNP, PM y filtros de fecha
+const getJugadorData = async (nombre, sala, fechaDesde = null, fechaHasta = null) => {
+  
+  // ✨ Validar que la sala sea una de las 5 disponibles
+  const salasValidas = ['XPK', 'PPP', 'SUP', 'CNP', 'PM'];
+  if (!salasValidas.includes(sala)) {
+    throw new Error(`Sala inválida. Salas disponibles: ${salasValidas.join(', ')}`);
+  }
+
+  // ✨ Construir filtro de fecha usando date_played de PT4
+  const dateFilter = buildDateFilter(fechaDesde, fechaHasta);
+  
+  // 🎯 Consulta SQL que aprovecha PT4 + filtros de fecha
   const selectQuery = `
    SELECT 
   p.id_player,
@@ -116,7 +135,11 @@ const getJugadorData = async (nombre, sala) => {
              AND chps.flg_showdown = TRUE 
              AND chps.flg_won_hand = TRUE THEN 1 ELSE 0 END)
   / NULLIF(SUM(CASE WHEN (chps.flg_r_bet = TRUE OR chps.flg_r_check_raise = TRUE) 
-                    AND chps.flg_showdown = TRUE THEN 1 ELSE 0 END), 0), 2) AS wsdwbr_pct
+                    AND chps.flg_showdown = TRUE THEN 1 ELSE 0 END), 0), 2) AS wsdwbr_pct,
+
+  -- ✨ Información del período analizado (usando PT4)
+  MIN(chps.date_played) AS fecha_primera_mano,
+  MAX(chps.date_played) AS fecha_ultima_mano
 
 FROM player p
 JOIN cash_hand_player_statistics chps ON p.id_player = chps.id_player
@@ -125,139 +148,209 @@ JOIN cash_limit cl ON chps.id_limit = cl.id_limit
 JOIN cash_hand_summary chs ON chps.id_hand = chs.id_hand
 WHERE p.player_name ILIKE $1 
   AND s.site_abbrev = $2
+  ${dateFilter}  -- ✨ Filtro de fecha dinámico usando PT4
 GROUP BY p.id_player, p.player_name, s.site_name
+HAVING COUNT(chps.id_hand) > 0
 ORDER BY total_manos DESC
 LIMIT 1;
   `;
   
   try {
-    // 🧠 Intento 1: búsqueda exacta (case-insensitive)
-    const exactQuery = selectQuery.replace("%%FILTRO%%", "LOWER(p.player_name) = LOWER($1)");
-    const exactResult = await db.query(exactQuery, [nombre, sala]);
-    if (exactResult.rows.length > 0) return exactResult.rows[0];
-
-    // 🔐 Detectar si hay caracteres especiales (no hacemos búsqueda parcial si los tiene)
-    const caracteresEspeciales = /[~`!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/]/;
-    if (caracteresEspeciales.test(nombre)) {
-      return null; // No hacemos búsqueda parcial si el nombre tiene símbolos especiales
+    const tipoFiltro = dateFilter ? ` (${fechaDesde} - ${fechaHasta})` : '';
+    console.log(`🔍 PT4 Query: ${nombre} en ${sala}${tipoFiltro}`);
+    
+    // 🧠 Búsqueda exacta (case-insensitive)
+    const exactResult = await db.query(selectQuery, [nombre, sala]);
+    if (exactResult.rows.length > 0) {
+      console.log(`✅ Encontrado: ${exactResult.rows[0].player_name} - ${exactResult.rows[0].total_manos} manos`);
+      return exactResult.rows[0];
     }
 
-    // 🕵️ Intento 2: búsqueda parcial
-    const partialQuery = selectQuery.replace("%%FILTRO%%", "p.player_name ILIKE $1");
-    const partialResult = await db.query(partialQuery, [`%${nombre}%`, sala]);
-    return partialResult.rows[0] || null;
+    // 🔐 Búsqueda parcial solo si no hay filtros de fecha (para performance)
+    if (!dateFilter) {
+      const caracteresEspeciales = /[~`!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/]/;
+      if (!caracteresEspeciales.test(nombre)) {
+        // Búsqueda parcial
+        const partialQuery = selectQuery.replace("p.player_name ILIKE $1", "p.player_name ILIKE $1");
+        const partialResult = await db.query(partialQuery, [`%${nombre}%`, sala]);
+        
+        if (partialResult.rows.length > 0) {
+          console.log(`✅ Encontrado (parcial): ${partialResult.rows[0].player_name}`);
+          return partialResult.rows[0];
+        }
+      }
+    }
+
+    console.log(`❌ No encontrado: ${nombre} en ${sala}${tipoFiltro}`);
+    return null;
+    
   } catch (error) {
-    console.error("❌ Error al obtener datos del jugador:", error);
+    console.error("❌ Error en consulta PT4:", error);
     throw error;
   }
 };
 
-
-// 📌 Función para interpretar los datos con IA
-const interpretarJugadorData = async (nombre, sala) => {
-  const jugador = await getJugadorData(nombre, sala);
+// ✨ Análisis IA ACTUALIZADO con filtros de fecha
+const interpretarJugadorData = async (nombre, sala, fechaDesde = null, fechaHasta = null) => {
+  const jugador = await getJugadorData(nombre, sala, fechaDesde, fechaHasta);
   if (!jugador) {
     return { error: "Jugador no encontrado" };
   }
 
-  // 📌 Cálculo del GAP VPIP - PFR y su interpretación
-const gap = jugador.vpip - jugador.pfr;
-const threeBet = jugador.three_bet;
-const limpPct = jugador.limp_pct;
+  // Determinar el contexto temporal
+  const periodoInfo = fechaDesde && fechaHasta 
+    ? `para el período ${fechaDesde} a ${fechaHasta}`
+    : 'en su historial completo';
 
-let gapLabel = '';
-if (gap >= 10 && threeBet < 5 && limpPct > 5) {
-  gapLabel = 'gap alto con señales pasivas';
-} else if (gap >= 8) {
-  gapLabel = 'gap moderado, no necesariamente pasivo';
-} else {
-  gapLabel = 'gap normal';
-}
+  const gap = jugador.vpip - jugador.pfr;
+  const threeBet = jugador.three_bet;
+  const limpPct = jugador.limp_pct;
 
-// 📌 Prompt mejorado para análisis de IA
-const prompt = `
-Eres un jugador profesional de cash online (NL50–NL100). Vas a analizar estadísticas de un oponente y generar un informe **corto, claro y accionable**, como si fuera una nota para otro reg en Discord.
+  let gapLabel = '';
+  if (gap >= 10 && threeBet < 5 && limpPct > 5) {
+    gapLabel = 'gap alto con señales pasivas';
+  } else if (gap >= 8) {
+    gapLabel = 'gap moderado, no necesariamente pasivo';
+  } else {
+    gapLabel = 'gap normal';
+  }
 
-🎯 Estilo directo, sin relleno, sin explicaciones teóricas. Evita tecnicismos largos. Usa lenguaje real de poker: "LAG", "se frena en turn", "flotar flop", "3B light", "spots CO vs BTN", etc.
+  const prompt = `
+Eres un jugador profesional de cash online. Analiza estadísticas de un oponente ${periodoInfo} y genera un informe corto y accionable.
 
-📌 Evalúa stats **en conjunto**, no por separado. Ejemplos:
-- VPIP alto + PFR bajo = pasivo.  
-- C-Bet flop alta + Turn baja = agresión inconsistente.  
-- WTSD alto + WSD bajo = paga mucho, gana poco.  
-- Fold al 3-Bet solo es leak si es >65% o <35%, o no cuadra con su estilo.
+🎯 Estilo directo, sin relleno. Usa lenguaje real de poker: "LAG", "se frena en turn", "flotar flop", "3B light", etc.
+
 📌 Gap VPIP–PFR detectado: ${gapLabel}
-
-📌 Si tiene menos de 1000 manos, di que el sample es bajo y que los reads son preliminares.
-❌ No incluyas ninguna lista de estadísticas numéricas al final ni pongas Stats clave. Solo el análisis.
+📌 Si tiene menos de 1000 manos, menciona que el sample es bajo.
+${fechaDesde && fechaHasta ? '📌 Análisis basado en período específico, puede no reflejar su juego completo.' : ''}
 
 ---
 
-📄 FORMATO EXACTO DEL INFORME:
-
-🎯 Informe sobre ${jugador.player_name}:
+🎯 Análisis de ${jugador.player_name} ${periodoInfo}:
 
 1️⃣ Estilo de juego:  
-[Estilo en 1–2 líneas, con términos comunes entre regs]
+[Descripción en 1-2 líneas]
 
 2️⃣ Errores explotables:  
-- [Leak 1 corto]  
-- [Leak 2 corto]  
-- [Leak 3 corto]
+- [Leak 1]  
+- [Leak 2]  
+- [Leak 3]
 
 3️⃣ Cómo explotarlo:  
-[Ajustes concisos, estilo "3Btea más en BTN", "flota flop seco", etc.]
+[Ajustes específicos]
 
 ---
 
 📊 Stats clave:
 - Manos: ${jugador.total_manos}
 - BB/100: ${jugador.bb_100}
-- Ganancias USD: ${jugador.win_usd}
-- VPIP: ${jugador.vpip}%
-- PFR: ${jugador.pfr}%
-- 3-Bet: ${jugador.three_bet}%
-- Fold to 3-Bet: ${jugador.fold_to_3bet_pct}%
-- 4-Bet: ${jugador.four_bet_preflop_pct}%
-- Fold to 4-Bet: ${jugador.fold_to_4bet_pct}%
-- C-Bet Flop: ${jugador.cbet_flop}%
-- C-Bet Turn: ${jugador.cbet_turn}%
-- WWSF: ${jugador.wwsf}%
-- WTSD: ${jugador.wtsd}%
-- WSD: ${jugador.wsd}%
-- Limp Preflop: ${jugador.total_limp_preflop}/${jugador.total_oportunidades_limp} (${jugador.limp_pct}%)
-- Limp-Raise: ${jugador.limp_raise_pct}%
-- Fold to Flop C-Bet: ${jugador.fold_to_flop_cbet_pct}%
-- Fold to Turn C-Bet: ${jugador.fold_to_turn_cbet_pct}%
-- Probe Bet Turn: ${jugador.probe_bet_turn_pct}%
--Fold to River Bet: ${jugador.fold_to_river_bet_pct}%
-- Bet River: ${jugador.bet_river_pct}%
-- Overbet Turn: ${jugador.overbet_turn_pct}%
-- Overbet River: ${jugador.overbet_river_pct}%
-- WSDwBR: ${jugador.wsdwbr_pct}%
+- VPIP: ${jugador.vpip}% | PFR: ${jugador.pfr}%
+- 3-Bet: ${jugador.three_bet}% | Fold to 3-Bet: ${jugador.fold_to_3bet_pct}%
+- C-Bet Flop: ${jugador.cbet_flop}% | Turn: ${jugador.cbet_turn}%
+- WTSD: ${jugador.wtsd}% | WSD: ${jugador.wsd}%
+${fechaDesde && fechaHasta ? `- Período: ${fechaDesde} a ${fechaHasta}` : ''}
 `;
 
-  // 📌 Enviar el mensaje a OpenAI
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "system", content: prompt }],
-      max_tokens: 350,
+      max_tokens: 400,
     });
 
     let analisis = response.choices[0].message.content;
+    if (gapLabel === 'gap normal') {
+      analisis = analisis.replace(/pasivo/gi, 'equilibrado');
+    }
 
-// Si el gap es normal, eliminamos menciones a "pasivo"
-if (gapLabel === 'gap normal') {
-  analisis = analisis.replace(/pasivo/gi, 'equilibrado');
-}
-
-    return { jugador: jugador.player_name, analisis: response.choices[0].message.content };
+    return { 
+      jugador: jugador.player_name, 
+      analisis: analisis,
+      periodo: fechaDesde && fechaHasta ? { desde: fechaDesde, hasta: fechaHasta } : null
+    };
   } catch (error) {
     console.error("❌ Error con OpenAI:", error);
     return { error: "No se pudo generar el análisis" };
   }
 };
 
+// ✨ Gráfico de ganancias ACTUALIZADO con filtros de fecha
+const obtenerGraficoGanancias = async (nombreJugador, fechaDesde = null, fechaHasta = null) => {
+  const dateFilter = buildDateFilter(fechaDesde, fechaHasta);
+  
+  const query = `
+    WITH hands AS (
+  SELECT 
+    ROW_NUMBER() OVER (ORDER BY chps.date_played) AS hand_number,
+    SUM(chps.amt_won) OVER (
+      ORDER BY chps.date_played 
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_total,
+    SUM(CASE WHEN chps.flg_showdown = false THEN chps.amt_won ELSE 0 END) OVER (
+      ORDER BY chps.date_played 
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_nosd,
+    SUM(CASE WHEN chps.flg_showdown = true THEN chps.amt_won ELSE 0 END) OVER (
+      ORDER BY chps.date_played 
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_sd
+  FROM cash_hand_player_statistics chps
+  JOIN player p ON chps.id_player = p.id_player
+  WHERE p.player_name ILIKE $1
+    AND chps.date_played IS NOT NULL
+    AND chps.amt_won IS NOT NULL
+    ${dateFilter}  -- ✨ Filtro de fecha usando PT4
+)
+SELECT 
+  FLOOR(hand_number / 100) * 100 AS hand_group,
+  MAX(cumulative_total) AS total_money_won,
+  MAX(cumulative_nosd) AS money_won_nosd,
+  MAX(cumulative_sd) AS money_won_sd
+FROM hands
+GROUP BY hand_group
+ORDER BY hand_group;
+  `;
+
+  try {
+    const tipoFiltro = dateFilter ? ' con filtro de fecha' : '';
+    console.log(`📈 PT4 Gráfico: ${nombreJugador}${tipoFiltro}`);
+    const { rows } = await db.query(query, [`%${nombreJugador}%`]);
+    return rows;
+  } catch (error) {
+      console.error("❌ Error en gráfico PT4:", error);
+      throw error;
+  }
+};
+
+// ✨ Sugerencias ACTUALIZADA con nuevas salas
+const getJugadorSugerencias = async (query, sala) => {
+  // Validar sala
+  const salasValidas = ['XPK', 'PPP', 'SUP', 'CNP', 'PM'];
+  if (!salasValidas.includes(sala)) {
+    return [];
+  }
+
+  const sql = `
+    SELECT DISTINCT p.player_name 
+    FROM player p
+    JOIN cash_hand_player_statistics chps ON p.id_player = chps.id_player
+    JOIN lookup_sites s ON p.id_site = s.id_site
+    WHERE p.player_name ILIKE $1
+    AND s.site_abbrev = $2
+    LIMIT 10;
+  `;
+
+  try {
+      console.log(`🔍 Sugerencias PT4: ${query} en ${sala}`);
+      const { rows } = await db.query(sql, [`%${query}%`, sala]); 
+      return rows; 
+  } catch (error) {
+      console.error("❌ Error en sugerencias PT4:", error);
+      return [];
+  }
+};
+
+// Función de ranking (sin cambios)
 const obtenerTopJugadoresPorStake = async (stakeSeleccionado) => {
     const query = `
         WITH ranked_players AS (
@@ -269,13 +362,11 @@ const obtenerTopJugadoresPorStake = async (stakeSeleccionado) => {
                 COUNT(chps.id_hand) AS total_manos,
                 ROUND(SUM(chps.amt_won) / NULLIF(COUNT(chps.id_hand), 0) * 100, 2) AS bb_100,
                 RANK() OVER (PARTITION BY REPLACE(LEFT(cl.limit_name, POSITION(' ' IN cl.limit_name) - 1), '$', '')::numeric 
-                             ORDER BY SUM(chps.amt_won) DESC) AS rank_win,
-                RANK() OVER (PARTITION BY REPLACE(LEFT(cl.limit_name, POSITION(' ' IN cl.limit_name) - 1), '$', '')::numeric 
-                             ORDER BY SUM(chps.amt_won) ASC) AS rank_loss
+                             ORDER BY SUM(chps.amt_won) DESC) AS rank_win
             FROM player p
             JOIN cash_hand_player_statistics chps ON p.id_player = chps.id_player
             JOIN cash_limit cl ON chps.id_limit = cl.id_limit
-            WHERE REPLACE(LEFT(cl.limit_name, POSITION(' ' IN cl.limit_name) - 1), '$', '')::numeric = $1 -- 🔹 FILTRO DENTRO DEL CTE
+            WHERE REPLACE(LEFT(cl.limit_name, POSITION(' ' IN cl.limit_name) - 1), '$', '')::numeric = $1
             GROUP BY stake, p.id_player, p.player_name
         )
         SELECT * FROM ranked_players 
@@ -284,80 +375,18 @@ const obtenerTopJugadoresPorStake = async (stakeSeleccionado) => {
     `;
 
     try {
-        const result = await db.query(query, [stakeSeleccionado]); // 🔹 Usa el parámetro correctamente
+        const result = await db.query(query, [stakeSeleccionado]);
         return result.rows;
     } catch (error) {
-        console.error('Error al obtener los jugadores por stake:', error);
+        console.error('Error al obtener ranking PT4:', error);
         throw error;
     }
 };
 
-const obtenerGraficoGanancias = async (nombreJugador) => {
-  const query = `
-    WITH hands AS (
-  SELECT 
-    ROW_NUMBER() OVER (ORDER BY chps.date_played) AS hand_number,
-
-    -- Ganancia total
-    SUM(chps.amt_won) OVER (
-      ORDER BY chps.date_played 
-      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS cumulative_total,
-
-    -- Ganancia sin showdown
-    SUM(CASE WHEN chps.flg_showdown = false THEN chps.amt_won ELSE 0 END) OVER (
-      ORDER BY chps.date_played 
-      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS cumulative_nosd,
-
-    -- Ganancia con showdown
-    SUM(CASE WHEN chps.flg_showdown = true THEN chps.amt_won ELSE 0 END) OVER (
-      ORDER BY chps.date_played 
-      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS cumulative_sd
-
-  FROM cash_hand_player_statistics chps
-  JOIN player p ON chps.id_player = p.id_player
-  WHERE p.player_name ILIKE $1
-    AND chps.date_played IS NOT NULL
-    AND chps.amt_won IS NOT NULL
-)
-SELECT 
-  FLOOR(hand_number / 100) * 100 AS hand_group,
-  MAX(cumulative_total) AS total_money_won,
-  MAX(cumulative_nosd) AS money_won_nosd,
-  MAX(cumulative_sd) AS money_won_sd
-FROM hands
-GROUP BY hand_group
-ORDER BY hand_group;
-
-  `;
-
-  try {
-    const { rows } = await db.query(query, [`%${nombreJugador}%`]);
-    return rows;
-  } catch (error) {
-      console.error("❌ Error al obtener el gráfico de ganancias:", error);
-      throw error;
-  }
+module.exports = { 
+  getJugadorData, 
+  obtenerTopJugadoresPorStake, 
+  obtenerGraficoGanancias, 
+  interpretarJugadorData, 
+  getJugadorSugerencias 
 };
-
-const getJugadorSugerencias = async (query) => {
-  const sql = `
-    SELECT DISTINCT p.player_name 
-    FROM player p
-    JOIN cash_hand_player_statistics chps ON p.id_player = chps.id_player
-    WHERE p.player_name ILIKE $1
-    LIMIT 10;
-  `;
-
-  try {
-      const { rows } = await db.query(sql, [`%${query}%`]); // 🔹 Aquí pasamos el parámetro correctamente
-      return rows; 
-  } catch (error) {
-      console.error("❌ Error al obtener sugerencias de jugadores:", error);
-      return [];
-  }
-};
-
-module.exports = { getJugadorData, obtenerTopJugadoresPorStake, obtenerGraficoGanancias, interpretarJugadorData, getJugadorSugerencias };

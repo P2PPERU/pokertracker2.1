@@ -24,8 +24,11 @@ import {
   InputGroup,
   InputLeftElement,
   Icon,
+  FormControl,
+  FormLabel,
+  Tooltip,
 } from '@chakra-ui/react';
-import { MoonIcon, SunIcon, SearchIcon } from '@chakra-ui/icons';
+import { MoonIcon, SunIcon, SearchIcon, CalendarIcon } from '@chakra-ui/icons';
 import {
   FaHandPaper,
   FaDollarSign,
@@ -46,6 +49,7 @@ import {
   FaUsers,
   FaUserTie,
   FaCopyright,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -84,6 +88,11 @@ const Dashboard = () => {
   const sugerenciasRef = useRef(null);
   const [salaSeleccionada, setSalaSeleccionada] = useState("XPK");
 
+  // ✨ NUEVOS ESTADOS PARA FILTROS DE FECHA
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [usarFiltroFecha, setUsarFiltroFecha] = useState(false);
+
   // Estado para estadísticas y copiado
   const [selectedStats, setSelectedStats] = useState({});
   const { onCopy, setValue } = useClipboard("");
@@ -93,6 +102,25 @@ const Dashboard = () => {
   // Estados para favoritos
   const [esFavorito, setEsFavorito] = useState(false);
   const [favoritos, setFavoritos] = useState([]);
+
+  // ✨ Función para obtener fechas por defecto (últimos 30 días)
+  const obtenerFechasPorDefecto = useCallback(() => {
+    const hoy = new Date();
+    const hace30Dias = new Date();
+    hace30Dias.setDate(hoy.getDate() - 30);
+    
+    return {
+      desde: hace30Dias.toISOString().split('T')[0],
+      hasta: hoy.toISOString().split('T')[0]
+    };
+  }, []);
+
+  // ✨ Inicializar fechas por defecto
+  useEffect(() => {
+    const fechas = obtenerFechasPorDefecto();
+    setFechaDesde(fechas.desde);
+    setFechaHasta(fechas.hasta);
+  }, [obtenerFechasPorDefecto]);
 
   // Función para obtener sugerencias (se memoriza para usar en el debounce)
   const fetchSugerencias = useCallback(async (query) => {
@@ -121,13 +149,27 @@ const Dashboard = () => {
     debouncedFetchSugerencias(e.target.value);
   }, [debouncedFetchSugerencias]);
 
-  // Función para buscar jugador
+  // ✨ Función para buscar jugador ACTUALIZADA con filtros de fecha
   const buscarJugador = useCallback(async (nombre) => {
     setLoading(true);
     setSugerencias([]);
     setSelectedStats({});
+    
     try {
-      const res = await api.get(`/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}`);
+      // ✨ Construir URL con parámetros de fecha opcionales
+      let url = `/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}`;
+      const params = new URLSearchParams();
+      
+      if (usarFiltroFecha && fechaDesde && fechaHasta) {
+        params.append('fechaDesde', fechaDesde);
+        params.append('fechaHasta', fechaHasta);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const res = await api.get(url);
       const jugadorData = res.data;
       setJugador(jugadorData);
   
@@ -144,7 +186,7 @@ const Dashboard = () => {
           );
           setEsFavorito(resFavorito.data.favorito);
         } catch (error) {
-          setEsFavorito(false); // si da error, asume que no es favorito
+          setEsFavorito(false);
           console.error("Error al verificar favorito (post búsqueda):", error);
         }
       }
@@ -153,9 +195,20 @@ const Dashboard = () => {
       console.error("Jugador no encontrado:", error);
       setJugador(null);
       setEsFavorito(false);
+      
+      // ✨ Mostrar mensaje de error más descriptivo
+      toast({
+        title: "Jugador no encontrado",
+        description: usarFiltroFecha 
+          ? "No se encontraron datos para este jugador en el rango de fechas seleccionado"
+          : "Verifica el nombre del jugador e inténtalo nuevamente",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
     }
     setLoading(false);
-  }, [salaSeleccionada, auth?.token]);
+  }, [salaSeleccionada, auth?.token, usarFiltroFecha, fechaDesde, fechaHasta, toast]);
   
   // Alternar favorito (agregar o eliminar en el backend)
   const toggleFavorito = async () => {
@@ -182,6 +235,28 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error al actualizar favoritos:", error);
     }
+  };
+
+  // ✨ Función para activar/desactivar filtro de fecha
+  const toggleFiltroFecha = () => {
+    setUsarFiltroFecha(!usarFiltroFecha);
+    if (!usarFiltroFecha) {
+      // Al activar, usar fechas por defecto
+      const fechas = obtenerFechasPorDefecto();
+      setFechaDesde(fechas.desde);
+      setFechaHasta(fechas.hasta);
+    }
+  };
+
+  // ✨ Función para establecer rangos predefinidos
+  const establecerRangoPredefinido = (dias) => {
+    const hoy = new Date();
+    const fechaInicio = new Date();
+    fechaInicio.setDate(hoy.getDate() - dias);
+    
+    setFechaDesde(fechaInicio.toISOString().split('T')[0]);
+    setFechaHasta(hoy.toISOString().split('T')[0]);
+    setUsarFiltroFecha(true);
   };
 
   // Buscar jugador predeterminado al montar
@@ -327,9 +402,6 @@ const Dashboard = () => {
 
   const tieneSuscripcionAvanzada = ["plata", "oro"].includes(auth.suscripcion);
 
-  // Definición del componente StatBoxEnhanced (reemplaza al anterior StatBox)
-
-
   return (
     <Box minH="100vh" bg={pageBg} p={4}>
       <Box maxW="1400px" mx="auto">
@@ -379,9 +451,10 @@ const Dashboard = () => {
             </HStack>
           </Flex>
           
-          {/* Búsqueda de jugador mejorada */}
+          {/* ✨ Búsqueda de jugador mejorada con filtros de fecha */}
           <Box mt={6}>
-            <Flex gap={4} align="center" mb={2}>
+            <Flex gap={4} align="center" mb={4} wrap="wrap">
+              {/* ✨ Selector de sala ACTUALIZADO con nuevas salas */}
               <Select
                 value={salaSeleccionada}
                 onChange={(e) => setSalaSeleccionada(e.target.value)}
@@ -395,6 +468,8 @@ const Dashboard = () => {
                 <option value="XPK">X-Poker</option>
                 <option value="PPP">PPPoker</option>
                 <option value="SUP">SupremaPoker</option>
+                <option value="CLG">ClubGG</option>
+                <option value="CPK">CoinPoker</option>
               </Select>
               
               <Box position="relative" flex="1" maxW={{ base: "100%", md: "400px" }}>
@@ -473,6 +548,117 @@ const Dashboard = () => {
                 Buscar
               </Button>
             </Flex>
+
+            {/* ✨ NUEVO: Controles de filtro de fecha */}
+            <Box 
+              p={4} 
+              bg="whiteAlpha.100" 
+              borderRadius="md" 
+              border="1px solid" 
+              borderColor="whiteAlpha.300"
+            >
+              <VStack spacing={3} align="stretch">
+                <HStack>
+                  <Icon as={FaCalendarAlt} color="whiteAlpha.800" />
+                  <Text color="whiteAlpha.900" fontWeight="medium">
+                    Filtros de Fecha
+                  </Text>
+                  <Tooltip label={usarFiltroFecha ? "Desactivar filtro de fecha" : "Activar filtro de fecha"}>
+                    <Button
+                      size="sm"
+                      variant={usarFiltroFecha ? "solid" : "outline"}
+                      colorScheme={usarFiltroFecha ? "green" : "gray"}
+                      onClick={toggleFiltroFecha}
+                    >
+                      {usarFiltroFecha ? "ON" : "OFF"}
+                    </Button>
+                  </Tooltip>
+                </HStack>
+
+                {usarFiltroFecha && (
+                  <>
+                    <HStack spacing={4} wrap="wrap">
+                      <FormControl maxW="200px">
+                        <FormLabel color="whiteAlpha.800" fontSize="sm">
+                          Desde
+                        </FormLabel>
+                        <Input
+                          type="date"
+                          value={fechaDesde}
+                          onChange={(e) => setFechaDesde(e.target.value)}
+                          bg="whiteAlpha.200"
+                          color="white"
+                          borderColor="whiteAlpha.300"
+                          _hover={{ borderColor: "whiteAlpha.400" }}
+                          _focus={{ borderColor: "white" }}
+                        />
+                      </FormControl>
+
+                      <FormControl maxW="200px">
+                        <FormLabel color="whiteAlpha.800" fontSize="sm">
+                          Hasta
+                        </FormLabel>
+                        <Input
+                          type="date"
+                          value={fechaHasta}
+                          onChange={(e) => setFechaHasta(e.target.value)}
+                          bg="whiteAlpha.200"
+                          color="white"
+                          borderColor="whiteAlpha.300"
+                          _hover={{ borderColor: "whiteAlpha.400" }}
+                          _focus={{ borderColor: "white" }}
+                        />
+                      </FormControl>
+                    </HStack>
+
+                    {/* ✨ Rangos predefinidos */}
+                    <HStack spacing={2} wrap="wrap">
+                      <Text color="whiteAlpha.800" fontSize="sm">
+                        Rangos rápidos:
+                      </Text>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        colorScheme="whiteAlpha"
+                        onClick={() => establecerRangoPredefinido(7)}
+                      >
+                        7 días
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        colorScheme="whiteAlpha"
+                        onClick={() => establecerRangoPredefinido(30)}
+                      >
+                        30 días
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        colorScheme="whiteAlpha"
+                        onClick={() => establecerRangoPredefinido(90)}
+                      >
+                        90 días
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        colorScheme="whiteAlpha"
+                        onClick={() => establecerRangoPredefinido(365)}
+                      >
+                        1 año
+                      </Button>
+                    </HStack>
+
+                    {usarFiltroFecha && fechaDesde && fechaHasta && (
+                      <Text color="whiteAlpha.700" fontSize="sm">
+                        📅 Buscando datos desde {new Date(fechaDesde).toLocaleDateString()} hasta {new Date(fechaHasta).toLocaleDateString()}
+                      </Text>
+                    )}
+                  </>
+                )}
+              </VStack>
+            </Box>
           </Box>
         </Box>
 
@@ -493,7 +679,12 @@ const Dashboard = () => {
             <VStack spacing={3}>
               <Icon as={FaSearch} boxSize={10} color="gray.400" />
               <Text fontSize="xl" color={textColor}>No se encontraron datos del jugador</Text>
-              <Text color={subtextColor}>Intenta buscar por nombre o alias</Text>
+              <Text color={subtextColor}>
+                {usarFiltroFecha 
+                  ? "Intenta ajustar el rango de fechas o buscar por nombre/alias" 
+                  : "Intenta buscar por nombre o alias"
+                }
+              </Text>
             </VStack>
           </Box>
         )}
@@ -537,6 +728,13 @@ const Dashboard = () => {
                     <Heading size="lg" color={textColor}>
                       Información del Jugador
                     </Heading>
+                    {/* ✨ Indicador de filtro de fecha activo */}
+                    {usarFiltroFecha && (
+                      <Badge colorScheme="blue" variant="subtle">
+                        <Icon as={FaCalendarAlt} mr={1} />
+                        Filtrado por fecha
+                      </Badge>
+                    )}
                   </HStack>
                   
                   <Flex 
@@ -608,6 +806,25 @@ const Dashboard = () => {
                       </VStack>
                     </HStack>
                   </Flex>
+
+                  {/* ✨ Mostrar información del rango de fechas si está activo */}
+                  {usarFiltroFecha && fechaDesde && fechaHasta && (
+                    <Box 
+                      p={3} 
+                      bg="blue.50" 
+                      borderRadius="md" 
+                      mb={4}
+                      position="relative"
+                      zIndex={1}
+                    >
+                      <HStack>
+                        <Icon as={FaCalendarAlt} color="blue.500" />
+                        <Text color="blue.700" fontSize="sm">
+                          <strong>Período analizado:</strong> {new Date(fechaDesde).toLocaleDateString()} - {new Date(fechaHasta).toLocaleDateString()}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  )}
                   
                   <Divider mb={4} />
                   
