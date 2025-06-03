@@ -16,6 +16,7 @@ import {
 import {
   FaUsers,
   FaFileAlt,
+  FaDatabase,
 } from 'react-icons/fa';
 
 // Importar componentes existentes
@@ -24,7 +25,10 @@ import { AdminStats } from '../components/admin/Dashboard';
 import { UserManagement } from '../components/admin/UserManagement';
 import { HandAnalysis } from '../components/admin/HandAnalysis';
 
-// Importar nuevo componente de métricas - COMENTADO TEMPORALMENTE
+// Importar nuevo componente CSV
+import { CSVManagement } from '../components/admin/CSVManagement';
+
+// Importar nuevo componente de métricas
 import MetricsOverview from '../components/admin/Metrics/MetricsOverview';
 
 import api from '../services/api';
@@ -205,8 +209,8 @@ const AdminPanel = () => {
           archivosManos={archivosManos} 
         />
         
-        {/* 💰 MÉTRICAS DE NEGOCIO - COMENTADO TEMPORALMENTE */}
-        { <MetricsOverview usuarios={usuarios} /> }
+        {/* 💰 MÉTRICAS DE NEGOCIO */}
+        <MetricsOverview usuarios={usuarios} />
 
         {/* Tabs de Gestión */}
         <Box 
@@ -225,6 +229,10 @@ const AdminPanel = () => {
                 <Icon as={FaFileAlt} mr={2} />
                 Análisis de Manos
               </Tab>
+              <Tab _selected={{ color: 'white', bg: '#4066ED' }}>
+                <Icon as={FaDatabase} mr={2} />
+                Gestión CSV
+              </Tab>
             </TabList>
 
             <TabPanels>
@@ -236,6 +244,11 @@ const AdminPanel = () => {
               {/* Panel de Análisis de Manos */}
               <TabPanel p={0}>
                 <HandAnalysis onDataChange={refreshData} />
+              </TabPanel>
+
+              {/* Panel de Gestión CSV */}
+              <TabPanel p={0}>
+                <CSVManagement onDataChange={refreshData} />
               </TabPanel>
             </TabPanels>
           </Tabs>

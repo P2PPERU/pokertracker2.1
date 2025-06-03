@@ -26,46 +26,101 @@ const StatsCSVController = {
 
       // Parsear CSV
       const lineas = contenidoCSV.split('\n').filter(linea => linea.trim());
+      console.log(`📋 Total líneas detectadas: ${lineas.length}`);
+      
       if (lineas.length < 2) {
         return res.status(400).json({
           error: 'El archivo CSV debe tener al menos headers y una fila de datos'
         });
       }
 
-      // Extraer headers y validar estructura
-      const headers = lineas[0].split(',').map(h => h.replace(/"/g, '').trim());
+      // ✅ CORREGIDO: Usar el mismo parser para headers y datos
+      const headers = StatsCSVController.parseCSVLine(lineas[0]);
+      console.log(`🏷️ Headers detectados (${headers.length}):`, headers);
+      
       const requiredHeaders = ['Site', 'Player', 'Hands', 'BB/100', 'VPIP', 'PFR'];
       
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
       if (missingHeaders.length > 0) {
+        console.log(`❌ Headers faltantes:`, missingHeaders);
         return res.status(400).json({
           error: `Headers faltantes: ${missingHeaders.join(', ')}`
         });
+      }
+
+      console.log(`✅ Headers válidos encontrados`);
+
+      // 🔍 DEBUG: Mostrar primeras líneas para análisis
+      console.log(`🔍 Primeras 3 líneas de datos:`);
+      for (let i = 1; i <= Math.min(3, lineas.length - 1); i++) {
+        const valoresLinea = StatsCSVController.parseCSVLine(lineas[i]);
+        console.log(`   Línea ${i}: ${valoresLinea.length} campos (${valoresLinea.slice(0, 3).join(', ')}, ...)`);
       }
 
       // Procesar datos en batches de 1000
       const BATCH_SIZE = 1000;
       let totalProcesados = 0;
       let totalErrores = 0;
+      let totalValidados = 0;
+      let totalRechazados = 0;
       const errores = [];
+
+      console.log(`🔄 Iniciando procesamiento por batches de ${BATCH_SIZE}...`);
 
       for (let i = 1; i < lineas.length; i += BATCH_SIZE) {
         const batch = lineas.slice(i, i + BATCH_SIZE);
         const jugadoresData = [];
+        
+        console.log(`📦 Procesando batch ${Math.floor(i/BATCH_SIZE) + 1}: líneas ${i} a ${i + batch.length - 1}`);
 
-        for (const linea of batch) {
+        for (let j = 0; j < batch.length; j++) {
+          const linea = batch[j];
+          const lineaNumero = i + j;
+          
           try {
             const valores = StatsCSVController.parseCSVLine(linea);
-            if (valores.length < headers.length) continue;
+            
+            // 🔍 DEBUG: Log cada 50 líneas para no saturar
+            if (lineaNumero % 50 === 0 || lineaNumero <= 5) {
+              console.log(`   📝 Línea ${lineaNumero}: ${valores.length} campos vs ${headers.length} headers`);
+            }
+            
+            // ✅ CORREGIDO: Verificar si tienen el mismo número de campos
+            if (valores.length !== headers.length) {
+              if (lineaNumero <= 5) {
+                console.log(`   ⚠️ Línea ${lineaNumero} saltada: ${valores.length} campos ≠ ${headers.length} headers`);
+              }
+              totalRechazados++;
+              continue;
+            }
 
             const jugadorData = StatsCSVController.mapCSVToJugador(headers, valores);
+            
+            // 🔍 DEBUG: Log del jugador mapeado
+            if (lineaNumero <= 5) {
+              console.log(`   🎯 Jugador mapeado:`, {
+                nombre: jugadorData.jugador_nombre,
+                site: jugadorData.site,
+                hands: jugadorData.hands,
+                bb_100: jugadorData.bb_100
+              });
+            }
             
             // Mapear sala y stake
             jugadorData.sala = StatsCSVModel.mapSala(jugadorData.site);
             jugadorData.stake_category = StatsCSVModel.mapStakeToCategory(jugadorData.stake_original);
             
+            // 🔍 DEBUG: Log del mapeo
+            if (lineaNumero <= 5) {
+              console.log(`   🏢 Mapeo: ${jugadorData.site} → ${jugadorData.sala}, stake: ${jugadorData.stake_category}`);
+            }
+            
             // Validar datos mínimos
             if (!jugadorData.jugador_nombre || jugadorData.hands < 1) {
+              if (lineaNumero <= 5) {
+                console.log(`   ❌ Jugador rechazado - Nombre: "${jugadorData.jugador_nombre}", Hands: ${jugadorData.hands}`);
+              }
+              totalRechazados++;
               continue;
             }
 
@@ -75,26 +130,56 @@ const StatsCSVController = {
             );
 
             jugadoresData.push(jugadorData);
+            totalValidados++;
+            
+            if (lineaNumero <= 5) {
+              console.log(`   ✅ Jugador validado: ${jugadorData.jugador_nombre} (${jugadorData.hands} manos)`);
+            }
             
           } catch (error) {
             totalErrores++;
-            errores.push(`Línea ${i + jugadoresData.length}: ${error.message}`);
+            const errorMsg = `Línea ${lineaNumero}: ${error.message}`;
+            errores.push(errorMsg);
+            
+            if (lineaNumero <= 5) {
+              console.log(`   💥 Error en línea ${lineaNumero}:`, error.message);
+            }
           }
         }
 
         // Insertar batch en BD
         if (jugadoresData.length > 0) {
-          await StatsCSVModel.upsertBatch(fecha, tipoPeriodo, jugadoresData);
-          totalProcesados += jugadoresData.length;
+          console.log(`💾 Insertando batch de ${jugadoresData.length} jugadores en BD...`);
+          
+          try {
+            await StatsCSVModel.upsertBatch(fecha, tipoPeriodo, jugadoresData);
+            totalProcesados += jugadoresData.length;
+            console.log(`✅ Batch insertado exitosamente: ${jugadoresData.length} jugadores`);
+          } catch (dbError) {
+            console.log(`❌ Error insertando batch:`, dbError.message);
+            totalErrores += jugadoresData.length;
+          }
+        } else {
+          console.log(`⚠️ Batch vacío, no hay jugadores para insertar`);
         }
       }
+
+      // 📊 RESUMEN FINAL
+      console.log(`📊 RESUMEN DEL PROCESAMIENTO:`);
+      console.log(`   📋 Total líneas: ${lineas.length - 1}`);
+      console.log(`   ✅ Jugadores validados: ${totalValidados}`);
+      console.log(`   ❌ Jugadores rechazados: ${totalRechazados}`);
+      console.log(`   💾 Jugadores procesados: ${totalProcesados}`);
+      console.log(`   💥 Errores totales: ${totalErrores}`);
 
       // Log del evento
       EventLogger.log(usuarioId, 'csv_upload', {
         tipo_periodo: tipoPeriodo,
         fecha: fecha,
         total_procesados: totalProcesados,
-        total_errores: totalErrores
+        total_errores: totalErrores,
+        total_validados: totalValidados,
+        total_rechazados: totalRechazados
       }, req).catch(console.error);
 
       res.json({
@@ -103,6 +188,8 @@ const StatsCSVController = {
         estadisticas: {
           total_procesados: totalProcesados,
           total_errores: totalErrores,
+          total_validados: totalValidados,
+          total_rechazados: totalRechazados,
           fecha_snapshot: fecha,
           tipo_periodo: tipoPeriodo
         },
@@ -118,7 +205,7 @@ const StatsCSVController = {
     }
   },
 
-  // Helper: Parsear línea CSV manualmente (para manejar comillas)
+  // ✅ MEJORADO: Parser CSV más robusto que maneja comillas correctamente
   parseCSVLine: (linea) => {
     const valores = [];
     let valorActual = '';
@@ -128,16 +215,20 @@ const StatsCSVController = {
       const char = linea[i];
       
       if (char === '"') {
+        // Toggle estado de comillas
         dentroComillas = !dentroComillas;
       } else if (char === ',' && !dentroComillas) {
-        valores.push(valorActual.trim());
+        // Solo dividir por coma si NO estamos dentro de comillas
+        valores.push(valorActual.replace(/^"|"$/g, '').trim()); // Quitar comillas y espacios
         valorActual = '';
       } else {
         valorActual += char;
       }
     }
     
-    valores.push(valorActual.trim());
+    // Agregar el último valor
+    valores.push(valorActual.replace(/^"|"$/g, '').trim());
+    
     return valores;
   },
 
@@ -158,7 +249,7 @@ const StatsCSVController = {
       '3Bet PF NO SQZ': 'three_bet_pf_no_sqz',
       '3Bet PF & Fold': 'three_bet_pf_fold',
       '2Bet PF & Fold': 'two_bet_pf_fold',
-      'Raise & 4Bet+ PF ': 'raise_4bet_plus_pf',
+      'Raise & 4Bet+ PF': 'raise_4bet_plus_pf', // ✅ Quitado espacio extra
       'PF Squeeze': 'pf_squeeze',
       'Donk F': 'donk_f',
       'XR Flop': 'xr_flop',

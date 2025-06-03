@@ -20,7 +20,7 @@ const app = express();
 
 // ✅ Middleware global
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Aumentar límite a 10MB
 app.use(compression());
 
 // 📊 INICIALIZAR TABLAS DE MÉTRICAS (una sola vez al arrancar)
