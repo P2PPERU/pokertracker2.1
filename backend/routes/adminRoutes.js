@@ -6,6 +6,7 @@ const { verificarToken, verificarAdmin } = require("../middleware/authMiddleware
 // 📊 NUEVO: Importar controladores de métricas
 const MetricController = require("../controllers/metricController");
 const EventController = require("../controllers/eventController");
+const StatsCSVController = require("../controllers/statsCSVController");
 
 // ✅ Obtener lista de todos los usuarios con conteo de solicitudes IA usadas
 router.get("/usuarios", verificarToken, verificarAdmin, async (req, res) => {
@@ -108,5 +109,43 @@ router.get("/events/:eventType", verificarToken, verificarAdmin, EventController
 
 // Limpiar eventos antiguos
 router.delete("/events-cleanup", verificarToken, verificarAdmin, EventController.cleanOldEvents);
+
+// 📊 NUEVOS ENDPOINTS DE STATS CSV PARA ADMIN
+router.post("/upload-stats-csv", verificarToken, verificarAdmin, StatsCSVController.uploadStatsCSV);
+router.get("/stats-csv-info", verificarToken, verificarAdmin, StatsCSVController.getUploadStats);
+
+// 📊 DASHBOARD DE ARCHIVOS CSV CARGADOS
+router.get("/csv-dashboard", verificarToken, verificarAdmin, async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        fecha_snapshot,
+        tipo_periodo,
+        sala,
+        COUNT(*) as total_jugadores,
+        MAX(processed_at) as ultimo_procesamiento,
+        COUNT(DISTINCT stake_category) as stakes_diferentes
+      FROM jugadores_stats_csv 
+      GROUP BY fecha_snapshot, tipo_periodo, sala
+      ORDER BY fecha_snapshot DESC, tipo_periodo, sala
+    `;
+    
+    const { rows } = await pool.query(query);
+    
+    res.json({
+      success: true,
+      archivos_cargados: rows,
+      resumen: {
+        total_snapshots: rows.length,
+        ultima_fecha: rows[0]?.fecha_snapshot,
+        total_jugadores: rows.reduce((sum, r) => sum + parseInt(r.total_jugadores), 0)
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error en dashboard CSV:", error);
+    res.status(500).json({ error: "Error obteniendo dashboard CSV" });
+  }
+});
+
 
 module.exports = router;

@@ -136,12 +136,14 @@ const trackingMiddleware = {
       if (!global.tablesInitialized) {
         const EventModel = require('../models/eventModel');
         const MetricModel = require('../models/metricModel');
+        const StatsCSVModel = require('../models/statsCSVModel');
         
         await EventModel.createTable();
         await MetricModel.createTable();
+        await StatsCSVModel.createTable();
         
         global.tablesInitialized = true;
-        console.log('✅ Tablas de eventos y métricas inicializadas');
+        console.log('✅ Tablas de eventos statss y métricas inicializadas');
       }
     } catch (error) {
       console.error('❌ Error inicializando tablas:', error);

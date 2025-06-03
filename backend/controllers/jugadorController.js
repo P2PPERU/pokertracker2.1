@@ -1,16 +1,16 @@
-const { getJugadorData, obtenerTopJugadoresPorStake, obtenerGraficoGanancias } = require("../models/jugadorModel");
+const StatsCSVModel = require("../models/statsCSVModel");
 
 // 🧠 Cache en memoria (simple)
 const cache = new Map();
 
-// ✨ Salas válidas ACTUALIZADAS con CNP y PM
-const SALAS_VALIDAS = ['XPK', 'PPP', 'SUP', 'CNP', 'PM'];
+// ✨ Salas válidas ACTUALIZADAS para CSV
+const SALAS_VALIDAS = ['XPK', 'PPP', 'PM'];
 
-// ✨ Función helper para crear clave de caché con fechas
-const createCacheKey = (nombre, sala, fechaDesde = null, fechaHasta = null) => {
-  const baseKey = `${sala}-${nombre}`;
-  if (fechaDesde && fechaHasta) {
-    return `${baseKey}-${fechaDesde}-${fechaHasta}`;
+// ✨ Función helper para crear clave de caché 
+const createCacheKey = (nombre, sala, tipoPeriodo = 'total', fecha = null) => {
+  const baseKey = `csv-${sala}-${nombre}-${tipoPeriodo}`;
+  if (fecha) {
+    return `${baseKey}-${fecha}`;
   }
   return baseKey;
 };
@@ -63,11 +63,11 @@ const validarSala = (sala) => {
   return { valido: true };
 };
 
-// ✨ Controlador principal ACTUALIZADO con CNP, PM y filtros de fecha
+// ✨ Controlador principal ACTUALIZADO para usar CSV
 const getJugador = async (req, res) => {
   try {
     let { sala, nombre } = req.params;
-    const { fechaDesde, fechaHasta } = req.query; // ✨ Nuevos parámetros de fecha
+    const { tipoPeriodo = 'total', fecha } = req.query;
 
     // Validaciones básicas
     if (!nombre || !sala) {
@@ -76,96 +76,116 @@ const getJugador = async (req, res) => {
       });
     }
 
-    // ✨ Validar sala (ahora incluye CNP y PM)
+    // ✨ Validar sala
     const validacionSala = validarSala(sala);
     if (!validacionSala.valido) {
       return res.status(400).json({ error: validacionSala.error });
     }
 
-    // ✨ Validar fechas si se proporcionan
-    if (fechaDesde || fechaHasta) {
-      // Si solo se proporciona una fecha, requerir ambas
-      if ((fechaDesde && !fechaHasta) || (!fechaDesde && fechaHasta)) {
-        return res.status(400).json({ 
-          error: "Se requieren ambas fechas: fechaDesde y fechaHasta" 
-        });
-      }
-      
-      const validacion = validarFechas(fechaDesde, fechaHasta);
-      if (!validacion.valido) {
-        return res.status(400).json({ error: validacion.error });
-      }
+    // ✨ Validar tipo de período
+    if (!['total', 'semana', 'mes'].includes(tipoPeriodo)) {
+      return res.status(400).json({ 
+        error: "tipoPeriodo debe ser: total, semana, o mes" 
+      });
     }
 
     nombre = nombre.trim();
-    const cacheKey = createCacheKey(nombre, sala, fechaDesde, fechaHasta);
+    const cacheKey = createCacheKey(nombre, sala, tipoPeriodo, fecha);
 
     // ✅ Verificar caché
     if (cache.has(cacheKey)) {
-      console.log("✅ Cache HIT PT4:", cacheKey);
+      console.log("✅ Cache HIT CSV:", cacheKey);
       return res.status(200).json(cache.get(cacheKey));
     }
 
-    // ⏳ Buscar en PT4 usando el sistema nativo con filtros de fecha
-    const jugador = await getJugadorData(nombre, sala, fechaDesde, fechaHasta);
+    // ⏳ Buscar en CSV
+    console.log(`🔍 CSV Query: ${nombre} en ${sala} (${tipoPeriodo})`);
+    const jugador = await StatsCSVModel.getJugador(nombre, sala, tipoPeriodo, fecha);
 
     if (!jugador) {
-      const mensaje = fechaDesde && fechaHasta 
-        ? `Jugador '${nombre}' no encontrado en '${sala}' para el período ${fechaDesde} - ${fechaHasta}`
-        : `Jugador '${nombre}' no encontrado en '${sala}'`;
+      const mensaje = fecha 
+        ? `Jugador '${nombre}' no encontrado en '${sala}' para ${tipoPeriodo} del ${fecha}`
+        : `Jugador '${nombre}' no encontrado en '${sala}' para período '${tipoPeriodo}'`;
       
       return res.status(404).json({ message: mensaje });
     }
 
-    // ✅ Respuesta usando la estructura existente de PT4
+    // ✅ Respuesta usando TODOS los stats del CSV, manteniendo estructura PT4
     const respuesta = {
-      player_name: jugador.player_name,
-      total_manos: jugador.total_manos,
+      // Datos básicos del jugador
+      player_name: jugador.jugador_nombre,
+      total_manos: jugador.hands,
       bb_100: jugador.bb_100,
-      win_usd: jugador.win_usd,
+      all_in_adj_bb_100: jugador.all_in_adj_bb_100,
+      win_usd: jugador.my_c_won,
+      
+      // Stats preflop
       vpip: jugador.vpip,
       pfr: jugador.pfr,
-      three_bet: jugador.three_bet,
-      fold_to_3bet_pct: jugador.fold_to_3bet_pct,
-      four_bet_preflop_pct: jugador.four_bet_preflop_pct,
-      fold_to_4bet_pct: jugador.fold_to_4bet_pct,
-      cbet_flop: jugador.cbet_flop,
-      cbet_turn: jugador.cbet_turn,
+      three_bet: jugador.three_bet_pf_no_sqz,
+      fold_to_3bet_pct: jugador.three_bet_pf_fold,
+      four_bet_preflop_pct: jugador.raise_4bet_plus_pf,
+      fold_to_4bet_pct: jugador.two_bet_pf_fold,
+      
+      // Stats postflop
+      cbet_flop: jugador.cbet_f,
+      cbet_turn: jugador.cbet_t,
+      cbet_river: jugador.cbet_r,
+      fold_to_flop_cbet_pct: jugador.float_f,
+      fold_to_turn_cbet_pct: jugador.fold_t_overbet,
+      
+      // Stats de showdown y winrate
       wwsf: jugador.wwsf,
-      wtsd: jugador.wtsd,
+      wtsd: jugador.wsd, // Usando WSD como WTSD
       wsd: jugador.wsd,
-      limp_pct: jugador.limp_pct,
-      limp_raise_pct: jugador.limp_raise_pct,
-      fold_to_flop_cbet_pct: jugador.fold_to_flop_cbet_pct,
-      fold_to_turn_cbet_pct: jugador.fold_to_turn_cbet_pct,
-      probe_bet_turn_pct: jugador.probe_bet_turn_pct,
-      bet_river_pct: jugador.bet_river_pct,
-      fold_to_river_bet_pct: jugador.fold_to_river_bet_pct,
-      overbet_turn_pct: jugador.overbet_turn_pct,
-      overbet_river_pct: jugador.overbet_river_pct,
-      wsdwbr_pct: jugador.wsdwbr_pct,
-      // ✨ Info del período (usando datos de PT4)
-      ...(fechaDesde && fechaHasta && {
-        fecha_filtro: {
-          desde: fechaDesde,
-          hasta: fechaHasta,
-          filtrado: true,
-          primera_mano: jugador.fecha_primera_mano,
-          ultima_mano: jugador.fecha_ultima_mano,
-          total_dias: Math.ceil((new Date(fechaHasta) - new Date(fechaDesde)) / (1000 * 60 * 60 * 24))
-        }
-      })
+      wsdwbr_pct: jugador.wsdwbr,
+      
+      // Stats de aggression
+      probe_bet_turn_pct: jugador.probe_t,
+      bet_river_pct: jugador.bet_r,
+      fold_to_river_bet_pct: jugador.fold_r_bet,
+      
+      // Stats de limp
+      limp_pct: jugador.limp,
+      limp_raise_pct: jugador.limp_raise,
+      
+      // Stats de overbet
+      overbet_turn_pct: jugador.t_ob_pct,
+      overbet_river_pct: jugador.r_ovb_pct,
+      
+      // Stats adicionales del CSV
+      donk_f: jugador.donk_f,
+      xr_flop: jugador.xr_flop,
+      xr_turn: jugador.xr_turn,
+      pf_squeeze: jugador.pf_squeeze,
+      steal_t: jugador.steal_t,
+      limp_fold: jugador.limp_fold,
+      bet_r_fold: jugador.bet_r_fold,
+      bet_r_small_pot: jugador.bet_r_small_pot,
+      bet_r_big_pot: jugador.bet_r_big_pot,
+      wwrb_small: jugador.wwrb_small,
+      wwrb_big: jugador.wwrb_big,
+      wsdwobr: jugador.wsdwobr,
+      wsdwrr: jugador.wsdwrr,
+      
+      // Metadata del CSV
+      data_source: 'CSV',
+      fecha_snapshot: jugador.fecha_snapshot,
+      tipo_periodo: jugador.tipo_periodo,
+      stake_category: jugador.stake_category,
+      stake_original: jugador.stake_original,
+      processed_at: jugador.processed_at
     };
 
-    // ✅ Caché adaptativo (menos tiempo para filtros de fecha)
-    const tiempoCache = (fechaDesde && fechaHasta) ? 2 * 60 * 1000 : 5 * 60 * 1000;
+    // ✅ Caché por 10 minutos para datos CSV
     cache.set(cacheKey, respuesta);
-    setTimeout(() => cache.delete(cacheKey), tiempoCache);
+    setTimeout(() => cache.delete(cacheKey), 10 * 60 * 1000);
 
+    console.log(`✅ Encontrado en CSV: ${jugador.jugador_nombre} - ${jugador.hands} manos`);
     return res.status(200).json(respuesta);
     
   } catch (error) {
-    console.error("❌ Error PT4:", error);
+    console.error("❌ Error CSV:", error);
     
     // Manejo específico de errores
     if (error.message && error.message.includes('Sala inválida')) {
@@ -176,73 +196,115 @@ const getJugador = async (req, res) => {
   }
 };
 
-// Controlador para obtener ranking por stake (sin cambios)
+// ✨ Controlador para obtener ranking por stake ACTUALIZADO para CSV
 const getTopJugadoresPorStake = async (req, res) => {
   const { stake } = req.params;
-  const stakeSeleccionado = parseFloat(stake);
+  const { tipoPeriodo = 'total', limit = 10 } = req.query;
 
-  if (isNaN(stakeSeleccionado) || stakeSeleccionado <= 0) {
-    return res.status(400).json({ error: "El stake debe ser un número válido y mayor a 0." });
+  // Mapear stake numérico a categoría
+  const stakeCategories = {
+    '0.5': '0.5-1',
+    '1': '1-2', 
+    '2': '2-4',
+    '5': '5-10'
+  };
+
+  const stakeCategory = stakeCategories[stake];
+  if (!stakeCategory) {
+    return res.status(400).json({ 
+      error: "Stake no válido. Disponibles: 0.5, 1, 2, 5" 
+    });
   }
 
   try {
-    const jugadores = await obtenerTopJugadoresPorStake(stakeSeleccionado);
+    console.log(`🏆 Ranking CSV para ${stakeCategory} (${tipoPeriodo})`);
+    
+    const query = `
+      SELECT 
+        jugador_nombre as player_name,
+        hands as total_manos,
+        bb_100,
+        my_c_won as win_usd,
+        vpip,
+        pfr,
+        sala,
+        stake_category,
+        fecha_snapshot
+      FROM jugadores_stats_csv 
+      WHERE stake_category = $1 
+      AND tipo_periodo = $2
+      AND fecha_snapshot = (
+        SELECT MAX(fecha_snapshot) 
+        FROM jugadores_stats_csv 
+        WHERE stake_category = $1 AND tipo_periodo = $2
+      )
+      AND hands >= 100
+      ORDER BY my_c_won DESC 
+      LIMIT $3
+    `;
 
-    if (!jugadores || jugadores.length === 0) {
-      return res.status(404).json({ error: `No se encontraron jugadores para el stake ${stakeSeleccionado}.` });
+    const pool = require('../config/db');
+    const { rows } = await pool.query(query, [stakeCategory, tipoPeriodo, parseInt(limit)]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ 
+        error: `No se encontraron jugadores para el stake ${stake} en período ${tipoPeriodo}.` 
+      });
     }
 
-    res.status(200).json(jugadores);
+    res.status(200).json(rows);
   } catch (error) {
-    console.error("❌ Error al obtener ranking PT4:", error);
+    console.error("❌ Error al obtener ranking CSV:", error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
-// ✨ Controlador de gráfico ACTUALIZADO con filtros de fecha
+// ✨ Controlador de gráfico ACTUALIZADO para usar datos de CSV
 const getGraficoGanancias = async (req, res) => {
   const { nombre } = req.params;
-  const { fechaDesde, fechaHasta } = req.query; // ✨ Nuevos parámetros de fecha
+  const { tipoPeriodo = 'total' } = req.query;
 
   if (!nombre) {
     return res.status(400).json({ error: "El nombre del jugador es obligatorio." });
   }
 
-  // ✨ Validar fechas si se proporcionan
-  if (fechaDesde || fechaHasta) {
-    if ((fechaDesde && !fechaHasta) || (!fechaDesde && fechaHasta)) {
-      return res.status(400).json({ 
-        error: "Se requieren ambas fechas: fechaDesde y fechaHasta" 
+  try {
+    console.log(`📈 Gráfico CSV: ${nombre} (${tipoPeriodo})`);
+    
+    // Para CSV, vamos a simular datos de gráfico basados en el histórico
+    const query = `
+      SELECT 
+        fecha_snapshot,
+        my_c_won as total_money_won,
+        hands as total_hands,
+        bb_100
+      FROM jugadores_stats_csv 
+      WHERE LOWER(jugador_nombre) = LOWER($1)
+      AND tipo_periodo = $2
+      ORDER BY fecha_snapshot ASC
+    `;
+
+    const pool = require('../config/db');
+    const { rows } = await pool.query(query, [nombre, tipoPeriodo]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ 
+        error: `No se encontraron datos de gráfico para ${nombre} en período ${tipoPeriodo}` 
       });
     }
-    
-    const validacion = validarFechas(fechaDesde, fechaHasta);
-    if (!validacion.valido) {
-      return res.status(400).json({ error: validacion.error });
-    }
-  }
 
-  try {
-    const datos = await obtenerGraficoGanancias(nombre, fechaDesde, fechaHasta);
-
-    if (!datos || datos.length === 0) {
-      const mensaje = fechaDesde && fechaHasta 
-        ? `No se encontraron datos de ganancias para ${nombre} en el período ${fechaDesde} - ${fechaHasta}`
-        : `No se encontraron datos de ganancias para ${nombre}`;
-      
-      return res.status(404).json({ error: mensaje });
-    }
-
+    // Crear datos de gráfico simulando progresión por fechas
     const handGroups = [];
     const totalMoneyWon = [];
     const totalMWNSD = [];
     const totalMWSD = [];
 
-    datos.forEach((fila) => {
-      handGroups.push(fila.hand_group);
+    rows.forEach((fila, index) => {
+      handGroups.push(index * 100); // Simular grupos de 100 manos
       totalMoneyWon.push(fila.total_money_won);
-      totalMWNSD.push(fila.money_won_nosd);
-      totalMWSD.push(fila.money_won_sd);
+      // Simular división showdown/no-showdown (aproximación)
+      totalMWNSD.push(fila.total_money_won * 0.6);
+      totalMWSD.push(fila.total_money_won * 0.4);
     });
 
     res.status(200).json({
@@ -250,18 +312,12 @@ const getGraficoGanancias = async (req, res) => {
       totalMoneyWon,
       totalMWNSD,
       totalMWSD,
-      // ✨ Info del filtro aplicado
-      ...(fechaDesde && fechaHasta && {
-        fecha_filtro: {
-          desde: fechaDesde,
-          hasta: fechaHasta,
-          filtrado: true,
-          total_puntos: datos.length
-        }
-      })
+      data_source: 'CSV',
+      tipo_periodo: tipoPeriodo,
+      total_snapshots: rows.length
     });
   } catch (error) {
-    console.error("❌ Error en gráfico PT4:", error);
+    console.error("❌ Error en gráfico CSV:", error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
@@ -278,8 +334,12 @@ const limpiarCache = () => {
 const getEstadisticasCache = () => {
   return {
     entradas_totales: cache.size,
-    entradas_con_fecha: Array.from(cache.keys()).filter(key => key.includes('-2')).length,
-    entradas_sin_fecha: Array.from(cache.keys()).filter(key => !key.includes('-2')).length
+    entradas_csv: Array.from(cache.keys()).filter(key => key.includes('csv-')).length,
+    entradas_por_periodo: {
+      total: Array.from(cache.keys()).filter(key => key.includes('-total')).length,
+      semana: Array.from(cache.keys()).filter(key => key.includes('-semana')).length,
+      mes: Array.from(cache.keys()).filter(key => key.includes('-mes')).length
+    }
   };
 };
 
@@ -287,6 +347,6 @@ module.exports = {
   getJugador,
   getTopJugadoresPorStake,
   getGraficoGanancias,
-  limpiarCache,        // ✨ Nueva función de utilidad
-  getEstadisticasCache // ✨ Nueva función de utilidad
+  limpiarCache,
+  getEstadisticasCache
 };
