@@ -1,4 +1,5 @@
 const StatsCSVModel = require("../models/statsCSVModel");
+const { getDbToFrontendMapping, STATS_MAPPING } = require('../config/statsMapping');
 
 // 🧠 Cache en memoria (simple)
 const cache = new Map();
@@ -110,7 +111,7 @@ const getJugador = async (req, res) => {
       return res.status(404).json({ message: mensaje });
     }
 
-    // ✅ Respuesta usando TODOS los stats del CSV, manteniendo estructura PT4
+    // ✅ Respuesta usando TODOS los stats del CSV con mapeo CORREGIDO
     const respuesta = {
       // Datos básicos del jugador
       player_name: jugador.jugador_nombre,
@@ -123,50 +124,53 @@ const getJugador = async (req, res) => {
       vpip: jugador.vpip,
       pfr: jugador.pfr,
       three_bet: jugador.three_bet_pf_no_sqz,
-      fold_to_3bet_pct: jugador.three_bet_pf_fold,
+      fold_to_3bet_pct: jugador.two_bet_pf_fold, // CORREGIDO: 2Bet PF & Fold = Fold to 3-Bet
+      fold_to_4bet_pct: jugador.three_bet_pf_fold, // CORREGIDO: 3Bet PF & Fold = Fold to 4-Bet
       four_bet_preflop_pct: jugador.raise_4bet_plus_pf,
-      fold_to_4bet_pct: jugador.two_bet_pf_fold,
+      squeeze: jugador.pf_squeeze,
       
-      // Stats postflop
+      // Stats flop
+      donk_flop: jugador.donk_f,
+      check_raise_flop: jugador.xr_flop,
       cbet_flop: jugador.cbet_f,
+      cbet_flop_ip: jugador.cbet_f_non_3b_nmw,
+      cbet_flop_oop: jugador.cbet_f_non_3b_nmw_non_sb_vs_bb,
+      fold_to_flop_cbet_pct: jugador.fold_to_f_cbet_non_3b || 0, // CORREGIDO: Usar la nueva columna
+      float_flop: jugador.float_f,
+      
+      // Stats turn
       cbet_turn: jugador.cbet_t,
-      cbet_river: jugador.cbet_r,
-      fold_to_flop_cbet_pct: jugador.float_f,
-      fold_to_turn_cbet_pct: jugador.fold_t_overbet,
-      
-      // Stats de showdown y winrate
-      wwsf: jugador.wwsf,
-      wtsd: jugador.wsd, // Usando WSD como WTSD
-      wsd: jugador.wsd,
-      wsdwbr_pct: jugador.wsdwbr,
-      
-      // Stats de aggression
       probe_bet_turn_pct: jugador.probe_t,
+      overbet_turn_pct: jugador.t_ob_pct,
+      fold_to_turn_overbet: jugador.fold_t_overbet,
+      fold_to_turn_cbet_pct: jugador.fold_to_t_cbet || 0, // CORREGIDO: Usar la nueva columna
+      steal_turn: jugador.steal_t,
+      check_raise_turn: jugador.xr_turn,
+      
+      // Stats river
+      cbet_river: jugador.cbet_r,
       bet_river_pct: jugador.bet_r,
       fold_to_river_bet_pct: jugador.fold_r_bet,
-      
-      // Stats de limp
-      limp_pct: jugador.limp,
-      limp_raise_pct: jugador.limp_raise,
-      
-      // Stats de overbet
-      overbet_turn_pct: jugador.t_ob_pct,
       overbet_river_pct: jugador.r_ovb_pct,
+      fold_to_river_overbet: jugador.fold_r_overbet,
+      bet_river_fold: jugador.bet_r_fold,
+      bet_river_small_pot: jugador.bet_r_small_pot,
+      bet_river_big_pot: jugador.bet_r_big_pot,
       
-      // Stats adicionales del CSV
-      donk_f: jugador.donk_f,
-      xr_flop: jugador.xr_flop,
-      xr_turn: jugador.xr_turn,
-      pf_squeeze: jugador.pf_squeeze,
-      steal_t: jugador.steal_t,
-      limp_fold: jugador.limp_fold,
-      bet_r_fold: jugador.bet_r_fold,
-      bet_r_small_pot: jugador.bet_r_small_pot,
-      bet_r_big_pot: jugador.bet_r_big_pot,
-      wwrb_small: jugador.wwrb_small,
-      wwrb_big: jugador.wwrb_big,
+      // Stats showdown
+      wwsf: jugador.wwsf,
+      wsd: jugador.wsd,
+      wtsd: jugador.wsd, // Usando WSD como WTSD temporalmente
+      wsdwbr_pct: jugador.wsdwbr,
       wsdwobr: jugador.wsdwobr,
       wsdwrr: jugador.wsdwrr,
+      wwrb_small: jugador.wwrb_small,
+      wwrb_big: jugador.wwrb_big,
+      
+      // Stats limp
+      limp_pct: jugador.limp,
+      limp_fold_pct: jugador.limp_fold,
+      limp_raise_pct: jugador.limp_raise,
       
       // Metadata del CSV
       data_source: 'CSV',
@@ -174,7 +178,7 @@ const getJugador = async (req, res) => {
       tipo_periodo: jugador.tipo_periodo,
       stake_category: jugador.stake_category,
       stake_original: jugador.stake_original,
-      processed_at: jugador.processed_at
+      processed_at: jugador.processed_at || new Date().toISOString()
     };
 
     // ✅ Caché por 10 minutos para datos CSV
@@ -238,7 +242,7 @@ const getTopJugadoresPorStake = async (req, res) => {
     `;
 
     const pool = require('../config/db');
-    const { rows } = await pool.query(query, [stake, tipoPeriodo, parseInt(limit)]);  // Cambiar stakeCategory por stake
+    const { rows } = await pool.query(query, [stake, tipoPeriodo, parseInt(limit)]);
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ 
@@ -252,7 +256,6 @@ const getTopJugadoresPorStake = async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
-
 
 // ✨ Controlador de gráfico ACTUALIZADO para usar datos de CSV
 const getGraficoGanancias = async (req, res) => {

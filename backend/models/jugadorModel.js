@@ -55,22 +55,25 @@ Eres un jugador profesional de cash online. Analiza estadísticas COMPLETAS de u
 
 🃏 PREFLOP:
 - VPIP: ${jugador.vpip}% | PFR: ${jugador.pfr}% (Gap: ${gap}%)
-- 3-Bet: ${threeBet}% | Fold to 3-Bet: ${jugador.three_bet_pf_fold || 0}%
-- 2-Bet Fold: ${jugador.two_bet_pf_fold || 0}%
+- 3-Bet: ${threeBet}% | Fold to 3-Bet: ${jugador.two_bet_pf_fold || 0}%
+- Fold to 4-Bet: ${jugador.three_bet_pf_fold || 0}%
 - 4-Bet+: ${jugador.raise_4bet_plus_pf || 0}%
 - Squeeze: ${jugador.pf_squeeze || 0}%
 - Limp: ${limpPct}% | Limp/Fold: ${jugador.limp_fold || 0}% | Limp/Raise: ${jugador.limp_raise || 0}%
 
 🎯 POSTFLOP AGGRESSION:
 - CBet Flop: ${jugador.cbet_f || 0}% | CBet Turn: ${jugador.cbet_t || 0}% | CBet River: ${jugador.cbet_r || 0}%
-- CBet (non-3B): ${jugador.cbet_f_non_3b_nmw || 0}%
+- CBet IP (in position): ${jugador.cbet_f_non_3b_nmw || 0}%
+- CBet OOP (out of position): ${jugador.cbet_f_non_3b_nmw_non_sb_vs_bb || 0}%
 - Donk Flop: ${jugador.donk_f || 0}%
 - Check/Raise Flop: ${jugador.xr_flop || 0}% | Check/Raise Turn: ${jugador.xr_turn || 0}%
 - Probe Turn: ${jugador.probe_t || 0}%
 - Bet River: ${jugador.bet_r || 0}%
 
 🛡️ DEFENSE STATS:
-- Float Flop: ${jugador.float_f || 0}%
+- Fold to Flop CBet: ${jugador.fold_to_f_cbet_non_3b || 0}%
+- Float Flop (call CBet): ${jugador.float_f || 0}%
+- Fold to Turn CBet: ${jugador.fold_to_t_cbet || 0}%
 - Fold to Overbet Turn: ${jugador.fold_t_overbet || 0}%
 - Fold to Overbet River: ${jugador.fold_r_overbet || 0}%
 - Fold to River Bet: ${jugador.fold_r_bet || 0}%

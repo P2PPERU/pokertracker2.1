@@ -1,6 +1,7 @@
 // backend/controllers/statsCSVController.js
 const StatsCSVModel = require('../models/statsCSVModel');
 const { EventLogger } = require('../utils/eventLogger');
+const { getFieldMapping } = require('../config/statsMapping');
 
 const StatsCSVController = {
   // Subir y procesar archivo CSV
@@ -255,56 +256,12 @@ const StatsCSVController = {
     return valores;
   },
 
-  // Helper: Mapear CSV row a objeto jugador
+  // Helper: Mapear CSV row a objeto jugador - ACTUALIZADO CON MAPEO CENTRALIZADO
   mapCSVToJugador: (headers, valores) => {
     const jugador = {};
     
-    // Mapeo de campos del CSV a campos de BD
-    const fieldMap = {
-      'Site': 'site',
-      'Player': 'jugador_nombre',
-      'All-In Adj BB/100': 'all_in_adj_bb_100',
-      'BB/100': 'bb_100',
-      'My C Won': 'my_c_won',
-      'Hands': 'hands',
-      'VPIP': 'vpip',
-      'PFR': 'pfr',
-      '3Bet PF NO SQZ': 'three_bet_pf_no_sqz',
-      '3Bet PF & Fold': 'three_bet_pf_fold',
-      '2Bet PF & Fold': 'two_bet_pf_fold',
-      'Raise & 4Bet+ PF': 'raise_4bet_plus_pf', // ✅ Quitado espacio extra
-      'PF Squeeze': 'pf_squeeze',
-      'Donk F': 'donk_f',
-      'XR Flop': 'xr_flop',
-      'CBet F (non-3B nMW, non SB vs BB)': 'cbet_f_non_3b_nmw_non_sb_vs_bb',
-      'CBet F (non-3B nMW)': 'cbet_f_non_3b_nmw',
-      'CBet F': 'cbet_f',
-      'Float F': 'float_f',
-      'CBet T': 'cbet_t',
-      'CBet R': 'cbet_r',
-      'WWSF': 'wwsf',
-      'WSD': 'wsd',
-      'Probe T': 'probe_t',
-      'T_OB%': 't_ob_pct',
-      'Fold T OverBet': 'fold_t_overbet',
-      'Fold R OverBet': 'fold_r_overbet',
-      'Steal T': 'steal_t',
-      'XR Turn': 'xr_turn',
-      'Limp/Fold': 'limp_fold',
-      'Limp': 'limp',
-      'Limp/Raise': 'limp_raise',
-      'Bet R': 'bet_r',
-      'Fold R Bet': 'fold_r_bet',
-      'WSDWBR': 'wsdwbr',
-      'R_OVB%': 'r_ovb_pct',
-      'WSDWOBR': 'wsdwobr',
-      'WSDWRR': 'wsdwrr',
-      'Bet R & Fold': 'bet_r_fold',
-      'Bet R Small Pot': 'bet_r_small_pot',
-      'WWRB SMALL': 'wwrb_small',
-      'Bet R Big Pot': 'bet_r_big_pot',
-      'WWRB BIG': 'wwrb_big'
-    };
+    // Obtener el mapeo de campos desde la configuración central
+    const fieldMap = getFieldMapping();
 
     headers.forEach((header, index) => {
       const dbField = fieldMap[header];
@@ -325,6 +282,15 @@ const StatsCSVController = {
         jugador[dbField] = valor;
       }
     });
+
+    // Validación adicional para campos críticos
+    if (!jugador.jugador_nombre) {
+      console.warn('⚠️ Jugador sin nombre detectado');
+    }
+    
+    if (!jugador.hands || jugador.hands < 1) {
+      console.warn(`⚠️ Jugador ${jugador.jugador_nombre || 'sin nombre'} con ${jugador.hands || 0} manos`);
+    }
 
     return jugador;
   },
