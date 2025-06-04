@@ -80,6 +80,12 @@ router.get("/jugador/autocomplete/:sala/:query", async (req, res) => {
 // ✨ Gráfico de ganancias — protegido (ACTUALIZADO para CSV)
 router.get("/grafico-ganancias/:nombre", verificarToken, getGraficoGanancias);
 
+// ✨ NUEVO: Ruta para obtener todos los stakes de un jugador
+router.get("/jugador/:sala/:nombre/stakes", verificarToken, async (req, res) => {
+  const jugadorController = require("../controllers/jugadorController");
+  return jugadorController.getStakesJugador(req, res);
+});
+
 // Ranking por stake — protegido (ACTUALIZADO para CSV)
 router.get("/top-jugadores/:stake", verificarToken, getTopJugadoresPorStake);
 

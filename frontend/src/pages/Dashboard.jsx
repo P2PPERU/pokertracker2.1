@@ -27,16 +27,15 @@ import {
   FormControl,
   FormLabel,
   Tooltip,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
   SimpleGrid,
   Stat,
   StatLabel,
   StatNumber,
   StatHelpText,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { MoonIcon, SunIcon, SearchIcon, CalendarIcon } from '@chakra-ui/icons';
 import {
@@ -123,6 +122,11 @@ const Dashboard = () => {
   const [esFavorito, setEsFavorito] = useState(false);
   const [favoritos, setFavoritos] = useState([]);
 
+  // ✨ NUEVO: Estados para multi-stake
+  const [stakesDisponibles, setStakesDisponibles] = useState([]);
+  const [stakeSeleccionado, setStakeSeleccionado] = useState(null);
+  const [loadingStakes, setLoadingStakes] = useState(false);
+
   // ✨ Función para obtener fechas por defecto (últimos 30 días)
   const obtenerFechasPorDefecto = useCallback(() => {
     const hoy = new Date();
@@ -169,38 +173,70 @@ const Dashboard = () => {
     debouncedFetchSugerencias(e.target.value);
   }, [debouncedFetchSugerencias]);
 
+  // ✨ NUEVO: Función para buscar todos los stakes del jugador
+  const buscarStakesJugador = useCallback(async (nombre) => {
+    setLoadingStakes(true);
+    try {
+      // Buscar en todos los stakes posibles
+      const stakes = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+      const stakesConDatos = [];
+      
+      // Buscar en paralelo para mejor rendimiento
+      const promises = stakes.map(async (stake) => {
+        try {
+          // CORREGIDO: No duplicar tipoPeriodo en la URL
+          const url = `/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}?tipoPeriodo=${tipoPeriodo}&stake=${stake}`;
+          const res = await api.get(url);
+          
+          if (res.data && res.data.total_manos > 0) {
+            return {
+              stake: res.data.stake_category || stake,
+              manos: res.data.total_manos,
+              data: res.data
+            };
+          }
+          return null;
+        } catch (error) {
+          return null;
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      const validResults = results.filter(r => r !== null);
+      
+      // Ordenar por cantidad de manos (mayor a menor)
+      validResults.sort((a, b) => b.manos - a.manos);
+      setStakesDisponibles(validResults);
+      
+      // Seleccionar el stake con más manos por defecto
+      if (validResults.length > 0) {
+        setStakeSeleccionado(validResults[0].stake);
+        setJugador(validResults[0].data);
+      }
+      
+    } catch (error) {
+      console.error("Error buscando stakes:", error);
+    } finally {
+      setLoadingStakes(false);
+    }
+  }, [salaSeleccionada, tipoPeriodo]);
+
   // ✨ Función para buscar jugador ACTUALIZADA con filtros
   const buscarJugador = useCallback(async (nombre) => {
     setLoading(true);
     setSugerencias([]);
     setSelectedStats({});
+    setStakesDisponibles([]);
     
     try {
-      // ✨ Construir URL con parámetros
-      let url = `/jugador/${salaSeleccionada}/${encodeURIComponent(nombre)}`;
-      const params = new URLSearchParams();
+      // Buscar todos los stakes del jugador
+      await buscarStakesJugador(nombre);
       
-      // Agregar tipo de período
-      params.append('tipoPeriodo', tipoPeriodo);
-      
-      if (usarFiltroFecha && fechaDesde && fechaHasta) {
-        params.append('fechaDesde', fechaDesde);
-        params.append('fechaHasta', fechaHasta);
-      }
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const res = await api.get(url);
-      const jugadorData = res.data;
-      setJugador(jugadorData);
-  
       // Verificar si es favorito al buscar
       if (auth?.token) {
         try {
           const resFavorito = await api.get(
-            `/favoritos/${salaSeleccionada}/${encodeURIComponent(jugadorData.player_name)}`,
+            `/favoritos/${salaSeleccionada}/${encodeURIComponent(nombre)}`,
             {
               headers: {
                 Authorization: `Bearer ${auth.token}`,
@@ -230,7 +266,17 @@ const Dashboard = () => {
       });
     }
     setLoading(false);
-  }, [salaSeleccionada, auth?.token, usarFiltroFecha, fechaDesde, fechaHasta, tipoPeriodo, toast]);
+  }, [salaSeleccionada, auth?.token, usarFiltroFecha, fechaDesde, fechaHasta, tipoPeriodo, toast, buscarStakesJugador]);
+
+  // ✨ NUEVO: Función para cambiar stake seleccionado
+  const cambiarStake = useCallback((nuevoStake) => {
+    const stakeData = stakesDisponibles.find(s => s.stake === nuevoStake);
+    if (stakeData) {
+      setStakeSeleccionado(nuevoStake);
+      setJugador(stakeData.data);
+      setSelectedStats({}); // Limpiar estadísticas seleccionadas al cambiar stake
+    }
+  }, [stakesDisponibles]);
   
   // Alternar favorito (agregar o eliminar en el backend)
   const toggleFavorito = async () => {
@@ -283,7 +329,7 @@ const Dashboard = () => {
 
   // Buscar jugador predeterminado al montar
   useEffect(() => {
-    buscarJugador("ABCPK0206");
+    buscarJugador("LALIGAMANAGER"); // Cambiar a un jugador que sepas que existe
   }, [buscarJugador]);
 
   useEffect(() => {
@@ -323,12 +369,22 @@ const Dashboard = () => {
     };
   }, [debouncedFetchSugerencias]);
 
-  // Memoriza la función de toggle para estadísticas
+  // ✨ CORREGIDO: Memoriza la función de toggle para estadísticas
   const toggleStatSelection = useCallback((title, value) => {
-    setSelectedStats((prev) => ({
-      ...prev,
-      [title]: prev[title] ? undefined : value,
-    }));
+    setSelectedStats((prev) => {
+      if (prev[title] !== undefined) {
+        // Si ya existe, eliminar completamente
+        const newStats = { ...prev };
+        delete newStats[title];
+        return newStats;
+      } else {
+        // Si no existe, agregar
+        return {
+          ...prev,
+          [title]: value
+        };
+      }
+    });
   }, []);
 
   // Actualizar el texto de estadísticas cuando cambian las estadísticas seleccionadas
@@ -917,6 +973,53 @@ const Dashboard = () => {
                     </HStack>
                   </Flex>
 
+                  {/* ✨ NUEVO: Selector de stake si hay múltiples */}
+                  {stakesDisponibles.length > 1 && (
+                    <Box 
+                      p={3} 
+                      bg={useColorModeValue("blue.50", "blue.900")}
+                      borderRadius="md" 
+                      mb={4}
+                      position="relative"
+                      zIndex={1}
+                    >
+                      <VStack align="stretch" spacing={2}>
+                        <HStack justify="space-between">
+                          <Text fontWeight="bold" color={textColor}>
+                            Stakes disponibles:
+                          </Text>
+                          <Badge colorScheme="blue">
+                            {stakesDisponibles.length} stakes
+                          </Badge>
+                        </HStack>
+                        
+                        <HStack spacing={2} wrap="wrap">
+                          {stakesDisponibles.map((stakeData) => (
+                            <Button
+                              key={stakeData.stake}
+                              size="sm"
+                              variant={stakeSeleccionado === stakeData.stake ? "solid" : "outline"}
+                              colorScheme={getStakeColor(stakeData.stake)}
+                              onClick={() => cambiarStake(stakeData.stake)}
+                              leftIcon={<Icon as={FaLayerGroup} />}
+                            >
+                              {getStakeLabel(stakeData.stake)}
+                              <Badge ml={2} variant="subtle">
+                                {stakeData.manos} manos
+                              </Badge>
+                            </Button>
+                          ))}
+                        </HStack>
+                        
+                        {stakeSeleccionado && (
+                          <Text fontSize="sm" color={subtextColor}>
+                            Mostrando estadísticas de {getStakeLabel(stakeSeleccionado)}
+                          </Text>
+                        )}
+                      </VStack>
+                    </Box>
+                  )}
+
                   {/* ✨ Información adicional del snapshot */}
                   {jugador.fecha_snapshot && (
                     <Box 
@@ -995,7 +1098,7 @@ const Dashboard = () => {
                 />
               </Box>
               
-              {/* Panel derecho - Estadísticas detalladas organizadas por categorías */}
+              {/* Panel derecho - TODAS las estadísticas juntas */}
               <Box 
                 flex={{ base: "1", lg: "4" }} 
                 maxW={{ base: "100%", lg: "70%" }}
@@ -1019,461 +1122,474 @@ const Dashboard = () => {
                     >
                       {jugador.player_name}
                     </Badge>
+                    {stakeSeleccionado && (
+                      <Badge 
+                        colorScheme={getStakeColor(stakeSeleccionado)} 
+                        variant="solid"
+                      >
+                        {getStakeLabel(stakeSeleccionado)}
+                      </Badge>
+                    )}
                   </HStack>
                   
-                  {/* ✨ NUEVO: Estadísticas organizadas por categorías en tabs */}
-                  <Tabs variant="enclosed" colorScheme="blue">
-                    <TabList flexWrap="wrap">
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaHandPaper} mr={2} />
-                        General
-                      </Tab>
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaHandRock} mr={2} />
-                        Preflop
-                      </Tab>
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaChartPie} mr={2} />
-                        Flop
-                      </Tab>
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaChessKnight} mr={2} />
-                        Turn
-                      </Tab>
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaWater} mr={2} />
-                        River
-                      </Tab>
-                      <Tab fontSize="sm" fontWeight="medium">
-                        <Icon as={FaTrophy} mr={2} />
-                        Showdown
-                      </Tab>
-                    </TabList>
-
-                    <TabPanels>
-                      {/* Tab General */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
-                          <StatBox
-                            icon={FaHandPaper}
-                            title="Manos Jugadas"
-                            value={jugador.total_manos}
-                            onClick={() => toggleStatSelection("Manos Jugadas", jugador.total_manos)}
-                            isSelected={selectedStats["Manos Jugadas"] !== undefined}
-                            color={brand.primary}
-                          />
-                          <StatBox
-                            icon={FaDollarSign}
-                            title="Ganancias USD"
-                            value={`$${jugador.win_usd}`}
-                            onClick={() => toggleStatSelection("Ganancias USD", `$${jugador.win_usd}`)}
-                            isSelected={selectedStats["Ganancias USD"] !== undefined}
-                            color={brand.primary}
-                            isSpecial={parseFloat(jugador.win_usd) > 0}
-                          />
+                  {/* ✨ NUEVO: Todas las estadísticas en una sola vista */}
+                  <VStack spacing={6} align="stretch">
+                    {/* Sección General */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaHandPaper} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>General</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaHandPaper}
+                          title="Manos Jugadas"
+                          value={jugador.total_manos}
+                          onClick={() => toggleStatSelection("Manos Jugadas", jugador.total_manos)}
+                          isSelected={selectedStats["Manos Jugadas"] !== undefined}
+                          color={brand.primary}
+                        />
+                        <StatBox
+                          icon={FaDollarSign}
+                          title="Ganancias USD"
+                          value={`$${jugador.win_usd}`}
+                          onClick={() => toggleStatSelection("Ganancias USD", `$${jugador.win_usd}`)}
+                          isSelected={selectedStats["Ganancias USD"] !== undefined}
+                          color={brand.primary}
+                          isSpecial={parseFloat(jugador.win_usd) > 0}
+                        />
+                        <StatBox
+                          icon={FaChartLine}
+                          title="WINRATE"
+                          value={`${jugador.bb_100} BB/100`}
+                          onClick={() => toggleStatSelection("WINRATE", `${jugador.bb_100} BB/100`)}
+                          isSelected={selectedStats["WINRATE"] !== undefined}
+                          color={brand.primary}
+                          isSpecial={parseFloat(jugador.bb_100) > 0}
+                        />
+                        {jugador.all_in_adj_bb_100 && (
                           <StatBox
                             icon={FaChartLine}
-                            title="WINRATE"
-                            value={`${jugador.bb_100} BB/100`}
-                            onClick={() => toggleStatSelection("WINRATE", `${jugador.bb_100} BB/100`)}
-                            isSelected={selectedStats["WINRATE"] !== undefined}
+                            title="AI Adj BB/100"
+                            value={`${jugador.all_in_adj_bb_100}`}
+                            onClick={() => toggleStatSelection("AI Adj BB/100", `${jugador.all_in_adj_bb_100}`)}
+                            isSelected={selectedStats["AI Adj BB/100"] !== undefined}
                             color={brand.primary}
-                            isSpecial={parseFloat(jugador.bb_100) > 0}
                           />
-                          {jugador.all_in_adj_bb_100 && (
+                        )}
+                      </SimpleGrid>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Sección Preflop */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaHandRock} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>Preflop</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaChartPie}
+                          title="VPIP"
+                          value={`${jugador.vpip}%`}
+                          onClick={() => toggleStatSelection("VPIP", `${jugador.vpip}%`)}
+                          isSelected={selectedStats["VPIP"] !== undefined}
+                          color={brand.primary}
+                          warning={parseFloat(jugador.vpip) > 30}
+                        />
+                        <StatBox
+                          icon={FaArrowUp}
+                          title="PFR"
+                          value={`${jugador.pfr}%`}
+                          onClick={() => toggleStatSelection("PFR", `${jugador.pfr}%`)}
+                          isSelected={selectedStats["PFR"] !== undefined}
+                          color={brand.primary}
+                          warning={parseFloat(jugador.pfr) > 25}
+                        />
+                        <StatBox
+                          icon={FaSyncAlt}
+                          title="3 BET"
+                          value={`${jugador.three_bet}%`}
+                          onClick={() => toggleStatSelection("3 BET", `${jugador.three_bet}%`)}
+                          isSelected={selectedStats["3 BET"] !== undefined}
+                          color={brand.primary}
+                          warning={parseFloat(jugador.three_bet) > 12}
+                        />
+                        <StatBox
+                          icon={FaArrowDown}
+                          title="Fold to 3-BET"
+                          value={`${jugador.fold_to_3bet_pct}%`}
+                          onClick={() => toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)}
+                          isSelected={selectedStats["Fold to 3-BET"] !== undefined}
+                          color={brand.primary}
+                        />
+                        {tieneSuscripcionAvanzada && (
+                          <>
                             <StatBox
-                              icon={FaChartLine}
-                              title="AI Adj BB/100"
-                              value={`${jugador.all_in_adj_bb_100}`}
-                              onClick={() => toggleStatSelection("AI Adj BB/100", `${jugador.all_in_adj_bb_100}`)}
-                              isSelected={selectedStats["AI Adj BB/100"] !== undefined}
+                              icon={FaArrowUp}
+                              title="4 Bet Preflop"
+                              value={`${jugador.four_bet_preflop_pct}%`}
+                              onClick={() => toggleStatSelection("4 Bet Preflop", `${jugador.four_bet_preflop_pct}%`)}
+                              isSelected={selectedStats["4 Bet Preflop"] !== undefined}
+                              color={brand.primary}
+                              warning={parseFloat(jugador.four_bet_preflop_pct) > 10}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to 4-Bet"
+                              value={`${jugador.fold_to_4bet_pct}%`}
+                              onClick={() => toggleStatSelection("Fold to 4-Bet", `${jugador.fold_to_4bet_pct}%`)}
+                              isSelected={selectedStats["Fold to 4-Bet"] !== undefined}
                               color={brand.primary}
                             />
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
+                            <StatBox
+                              icon={FaHandshake}
+                              title="Squeeze"
+                              value={`${jugador.squeeze || 0}%`}
+                              onClick={() => toggleStatSelection("Squeeze", `${jugador.squeeze || 0}%`)}
+                              isSelected={selectedStats["Squeeze"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaWalking}
+                              title="Limp %"
+                              value={`${jugador.limp_pct}%`}
+                              onClick={() => toggleStatSelection("Limp %", `${jugador.limp_pct}%`)}
+                              isSelected={selectedStats["Limp %"] !== undefined}
+                              color={brand.primary}
+                              warning={parseFloat(jugador.limp_pct) > 15}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Limp/Fold %"
+                              value={`${jugador.limp_fold_pct || 0}%`}
+                              onClick={() => toggleStatSelection("Limp/Fold %", `${jugador.limp_fold_pct || 0}%`)}
+                              isSelected={selectedStats["Limp/Fold %"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandPointUp}
+                              title="Limp-Raise %"
+                              value={`${jugador.limp_raise_pct}%`}
+                              onClick={() => toggleStatSelection("Limp-Raise %", `${jugador.limp_raise_pct}%`)}
+                              isSelected={selectedStats["Limp-Raise %"] !== undefined}
+                              color={brand.primary}
+                              warning={parseFloat(jugador.limp_raise_pct) > 5}
+                            />
+                          </>
+                        )}
+                      </SimpleGrid>
+                    </Box>
 
-                      {/* Tab Preflop */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-                          <StatBox
-                            icon={FaChartPie}
-                            title="VPIP"
-                            value={`${jugador.vpip}%`}
-                            onClick={() => toggleStatSelection("VPIP", `${jugador.vpip}%`)}
-                            isSelected={selectedStats["VPIP"] !== undefined}
-                            color={brand.primary}
-                            warning={parseFloat(jugador.vpip) > 30}
-                          />
-                          <StatBox
-                            icon={FaArrowUp}
-                            title="PFR"
-                            value={`${jugador.pfr}%`}
-                            onClick={() => toggleStatSelection("PFR", `${jugador.pfr}%`)}
-                            isSelected={selectedStats["PFR"] !== undefined}
-                            color={brand.primary}
-                            warning={parseFloat(jugador.pfr) > 25}
-                          />
-                          <StatBox
-                            icon={FaSyncAlt}
-                            title="3 BET"
-                            value={`${jugador.three_bet}%`}
-                            onClick={() => toggleStatSelection("3 BET", `${jugador.three_bet}%`)}
-                            isSelected={selectedStats["3 BET"] !== undefined}
-                            color={brand.primary}
-                            warning={parseFloat(jugador.three_bet) > 12}
-                          />
-                          <StatBox
-                            icon={FaArrowDown}
-                            title="Fold to 3-BET"
-                            value={`${jugador.fold_to_3bet_pct}%`}
-                            onClick={() => toggleStatSelection("Fold to 3-BET", `${jugador.fold_to_3bet_pct}%`)}
-                            isSelected={selectedStats["Fold to 3-BET"] !== undefined}
-                            color={brand.primary}
-                          />
-                          {tieneSuscripcionAvanzada && (
-                            <>
-                              <StatBox
-                                icon={FaArrowUp}
-                                title="4 Bet Preflop"
-                                value={`${jugador.four_bet_preflop_pct}%`}
-                                onClick={() => toggleStatSelection("4 Bet Preflop", `${jugador.four_bet_preflop_pct}%`)}
-                                isSelected={selectedStats["4 Bet Preflop"] !== undefined}
-                                color={brand.primary}
-                                warning={parseFloat(jugador.four_bet_preflop_pct) > 10}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to 4-Bet"
-                                value={`${jugador.fold_to_4bet_pct}%`}
-                                onClick={() => toggleStatSelection("Fold to 4-Bet", `${jugador.fold_to_4bet_pct}%`)}
-                                isSelected={selectedStats["Fold to 4-Bet"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandshake}
-                                title="Squeeze"
-                                value={`${jugador.squeeze || 0}%`}
-                                onClick={() => toggleStatSelection("Squeeze", `${jugador.squeeze || 0}%`)}
-                                isSelected={selectedStats["Squeeze"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaWalking}
-                                title="Limp %"
-                                value={`${jugador.limp_pct}%`}
-                                onClick={() => toggleStatSelection("Limp %", `${jugador.limp_pct}%`)}
-                                isSelected={selectedStats["Limp %"] !== undefined}
-                                color={brand.primary}
-                                warning={parseFloat(jugador.limp_pct) > 15}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Limp/Fold %"
-                                value={`${jugador.limp_fold_pct || 0}%`}
-                                onClick={() => toggleStatSelection("Limp/Fold %", `${jugador.limp_fold_pct || 0}%`)}
-                                isSelected={selectedStats["Limp/Fold %"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandPointUp}
-                                title="Limp-Raise %"
-                                value={`${jugador.limp_raise_pct}%`}
-                                onClick={() => toggleStatSelection("Limp-Raise %", `${jugador.limp_raise_pct}%`)}
-                                isSelected={selectedStats["Limp-Raise %"] !== undefined}
-                                color={brand.primary}
-                                warning={parseFloat(jugador.limp_raise_pct) > 5}
-                              />
-                            </>
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
+                    <Divider />
 
-                      {/* Tab Flop */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-                          <StatBox
-                            icon={FaChartPie}
-                            title="CBet Flop"
-                            value={`${jugador.cbet_flop}%`}
-                            onClick={() => toggleStatSelection("CBet Flop", `${jugador.cbet_flop}%`)}
-                            isSelected={selectedStats["CBet Flop"] !== undefined}
-                            color={brand.primary}
-                          />
-                          {tieneSuscripcionAvanzada && (
-                            <>
-                              <StatBox
-                                icon={FaChartPie}
-                                title="CBet Flop IP"
-                                value={`${jugador.cbet_flop_ip || 0}%`}
-                                onClick={() => toggleStatSelection("CBet Flop IP", `${jugador.cbet_flop_ip || 0}%`)}
-                                isSelected={selectedStats["CBet Flop IP"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaChartPie}
-                                title="CBet Flop OOP"
-                                value={`${jugador.cbet_flop_oop || 0}%`}
-                                onClick={() => toggleStatSelection("CBet Flop OOP", `${jugador.cbet_flop_oop || 0}%`)}
-                                isSelected={selectedStats["CBet Flop OOP"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandRock}
-                                title="Donk Flop"
-                                value={`${jugador.donk_flop || 0}%`}
-                                onClick={() => toggleStatSelection("Donk Flop", `${jugador.donk_flop || 0}%`)}
-                                isSelected={selectedStats["Donk Flop"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaArrowUp}
-                                title="Check/Raise Flop"
-                                value={`${jugador.check_raise_flop || 0}%`}
-                                onClick={() => toggleStatSelection("Check/Raise Flop", `${jugador.check_raise_flop || 0}%`)}
-                                isSelected={selectedStats["Check/Raise Flop"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to Flop CBet"
-                                value={`${jugador.fold_to_flop_cbet_pct}%`}
-                                onClick={() => toggleStatSelection("Fold to Flop CBet", `${jugador.fold_to_flop_cbet_pct}%`)}
-                                isSelected={selectedStats["Fold to Flop CBet"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandshake}
-                                title="Float Flop"
-                                value={`${jugador.float_flop || 0}%`}
-                                onClick={() => toggleStatSelection("Float Flop", `${jugador.float_flop || 0}%`)}
-                                isSelected={selectedStats["Float Flop"] !== undefined}
-                                color={brand.primary}
-                              />
-                            </>
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
+                    {/* Sección Flop */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaChartPie} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>Flop</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaChartPie}
+                          title="CBet Flop"
+                          value={`${jugador.cbet_flop}%`}
+                          onClick={() => toggleStatSelection("CBet Flop", `${jugador.cbet_flop}%`)}
+                          isSelected={selectedStats["CBet Flop"] !== undefined}
+                          color={brand.primary}
+                        />
+                        {tieneSuscripcionAvanzada && (
+                          <>
+                            <StatBox
+                              icon={FaChartPie}
+                              title="CBet Flop IP"
+                              value={`${jugador.cbet_flop_ip || 0}%`}
+                              onClick={() => toggleStatSelection("CBet Flop IP", `${jugador.cbet_flop_ip || 0}%`)}
+                              isSelected={selectedStats["CBet Flop IP"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaChartPie}
+                              title="CBet Flop OOP"
+                              value={`${jugador.cbet_flop_oop || 0}%`}
+                              onClick={() => toggleStatSelection("CBet Flop OOP", `${jugador.cbet_flop_oop || 0}%`)}
+                              isSelected={selectedStats["CBet Flop OOP"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandRock}
+                              title="Donk Flop"
+                              value={`${jugador.donk_flop || 0}%`}
+                              onClick={() => toggleStatSelection("Donk Flop", `${jugador.donk_flop || 0}%`)}
+                              isSelected={selectedStats["Donk Flop"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaArrowUp}
+                              title="Check/Raise Flop"
+                              value={`${jugador.check_raise_flop || 0}%`}
+                              onClick={() => toggleStatSelection("Check/Raise Flop", `${jugador.check_raise_flop || 0}%`)}
+                              isSelected={selectedStats["Check/Raise Flop"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to Flop CBet"
+                              value={`${jugador.fold_to_flop_cbet_pct}%`}
+                              onClick={() => toggleStatSelection("Fold to Flop CBet", `${jugador.fold_to_flop_cbet_pct}%`)}
+                              isSelected={selectedStats["Fold to Flop CBet"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandshake}
+                              title="Float Flop"
+                              value={`${jugador.float_flop || 0}%`}
+                              onClick={() => toggleStatSelection("Float Flop", `${jugador.float_flop || 0}%`)}
+                              isSelected={selectedStats["Float Flop"] !== undefined}
+                              color={brand.primary}
+                            />
+                          </>
+                        )}
+                      </SimpleGrid>
+                    </Box>
 
-                      {/* Tab Turn */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-                          <StatBox
-                            icon={FaChartPie}
-                            title="CBet Turn"
-                            value={`${jugador.cbet_turn}%`}
-                            onClick={() => toggleStatSelection("CBet Turn", `${jugador.cbet_turn}%`)}
-                            isSelected={selectedStats["CBet Turn"] !== undefined}
-                            color={brand.primary}
-                          />
-                          {tieneSuscripcionAvanzada && (
-                            <>
-                              <StatBox
-                                icon={FaChartPie}
-                                title="Probe Bet Turn %"
-                                value={`${jugador.probe_bet_turn_pct}%`}
-                                onClick={() => toggleStatSelection("Probe Bet Turn %", `${jugador.probe_bet_turn_pct}%`)}
-                                isSelected={selectedStats["Probe Bet Turn %"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to Turn CBet"
-                                value={`${jugador.fold_to_turn_cbet_pct}%`}
-                                onClick={() => toggleStatSelection("Fold to Turn CBet", `${jugador.fold_to_turn_cbet_pct}%`)}
-                                isSelected={selectedStats["Fold to Turn CBet"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaExclamationTriangle}
-                                title="Overbet Turn %"
-                                value={`${jugador.overbet_turn_pct}%`}
-                                onClick={() => toggleStatSelection("Overbet Turn %", `${jugador.overbet_turn_pct}%`)}
-                                isSelected={selectedStats["Overbet Turn %"] !== undefined}
-                                color={brand.primary}
-                                warning={parseFloat(jugador.overbet_turn_pct) > 10}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to Turn OB"
-                                value={`${jugador.fold_to_turn_overbet || 0}%`}
-                                onClick={() => toggleStatSelection("Fold to Turn OB", `${jugador.fold_to_turn_overbet || 0}%`)}
-                                isSelected={selectedStats["Fold to Turn OB"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaArrowUp}
-                                title="Check/Raise Turn"
-                                value={`${jugador.check_raise_turn || 0}%`}
-                                onClick={() => toggleStatSelection("Check/Raise Turn", `${jugador.check_raise_turn || 0}%`)}
-                                isSelected={selectedStats["Check/Raise Turn"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaChessKnight}
-                                title="Steal Turn"
-                                value={`${jugador.steal_turn || 0}%`}
-                                onClick={() => toggleStatSelection("Steal Turn", `${jugador.steal_turn || 0}%`)}
-                                isSelected={selectedStats["Steal Turn"] !== undefined}
-                                color={brand.primary}
-                              />
-                            </>
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
+                    <Divider />
 
-                      {/* Tab River */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-                          <StatBox
-                            icon={FaChartPie}
-                            title="CBet River"
-                            value={`${jugador.cbet_river || 0}%`}
-                            onClick={() => toggleStatSelection("CBet River", `${jugador.cbet_river || 0}%`)}
-                            isSelected={selectedStats["CBet River"] !== undefined}
-                            color={brand.primary}
-                          />
-                          {tieneSuscripcionAvanzada && (
-                            <>
-                              <StatBox
-                                icon={FaWater}
-                                title="Bet River %"
-                                value={`${jugador.bet_river_pct}%`}
-                                onClick={() => toggleStatSelection("Bet River %", `${jugador.bet_river_pct}%`)}
-                                isSelected={selectedStats["Bet River %"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to River Bet"
-                                value={`${jugador.fold_to_river_bet_pct}%`}
-                                onClick={() => toggleStatSelection("Fold to River Bet", `${jugador.fold_to_river_bet_pct}%`)}
-                                isSelected={selectedStats["Fold to River Bet"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaExclamationTriangle}
-                                title="Overbet River %"
-                                value={`${jugador.overbet_river_pct}%`}
-                                onClick={() => toggleStatSelection("Overbet River %", `${jugador.overbet_river_pct}%`)}
-                                isSelected={selectedStats["Overbet River %"] !== undefined}
-                                color={brand.primary}
-                                warning={parseFloat(jugador.overbet_river_pct) > 10}
-                              />
-                              <StatBox
-                                icon={FaArrowDown}
-                                title="Fold to River OB"
-                                value={`${jugador.fold_to_river_overbet || 0}%`}
-                                onClick={() => toggleStatSelection("Fold to River OB", `${jugador.fold_to_river_overbet || 0}%`)}
-                                isSelected={selectedStats["Fold to River OB"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandshake}
-                                title="Bet River & Fold"
-                                value={`${jugador.bet_river_fold || 0}%`}
-                                onClick={() => toggleStatSelection("Bet River & Fold", `${jugador.bet_river_fold || 0}%`)}
-                                isSelected={selectedStats["Bet River & Fold"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaChartPie}
-                                title="Bet River Small"
-                                value={`${jugador.bet_river_small_pot || 0}%`}
-                                onClick={() => toggleStatSelection("Bet River Small", `${jugador.bet_river_small_pot || 0}%`)}
-                                isSelected={selectedStats["Bet River Small"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaChartPie}
-                                title="Bet River Big"
-                                value={`${jugador.bet_river_big_pot || 0}%`}
-                                onClick={() => toggleStatSelection("Bet River Big", `${jugador.bet_river_big_pot || 0}%`)}
-                                isSelected={selectedStats["Bet River Big"] !== undefined}
-                                color={brand.primary}
-                              />
-                            </>
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
+                    {/* Sección Turn */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaChessKnight} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>Turn</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaChartPie}
+                          title="CBet Turn"
+                          value={`${jugador.cbet_turn}%`}
+                          onClick={() => toggleStatSelection("CBet Turn", `${jugador.cbet_turn}%`)}
+                          isSelected={selectedStats["CBet Turn"] !== undefined}
+                          color={brand.primary}
+                        />
+                        {tieneSuscripcionAvanzada && (
+                          <>
+                            <StatBox
+                              icon={FaChartPie}
+                              title="Probe Bet Turn %"
+                              value={`${jugador.probe_bet_turn_pct}%`}
+                              onClick={() => toggleStatSelection("Probe Bet Turn %", `${jugador.probe_bet_turn_pct}%`)}
+                              isSelected={selectedStats["Probe Bet Turn %"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to Turn CBet"
+                              value={`${jugador.fold_to_turn_cbet_pct}%`}
+                              onClick={() => toggleStatSelection("Fold to Turn CBet", `${jugador.fold_to_turn_cbet_pct}%`)}
+                              isSelected={selectedStats["Fold to Turn CBet"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaExclamationTriangle}
+                              title="Overbet Turn %"
+                              value={`${jugador.overbet_turn_pct}%`}
+                              onClick={() => toggleStatSelection("Overbet Turn %", `${jugador.overbet_turn_pct}%`)}
+                              isSelected={selectedStats["Overbet Turn %"] !== undefined}
+                              color={brand.primary}
+                              warning={parseFloat(jugador.overbet_turn_pct) > 10}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to Turn OB"
+                              value={`${jugador.fold_to_turn_overbet || 0}%`}
+                              onClick={() => toggleStatSelection("Fold to Turn OB", `${jugador.fold_to_turn_overbet || 0}%`)}
+                              isSelected={selectedStats["Fold to Turn OB"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaArrowUp}
+                              title="Check/Raise Turn"
+                              value={`${jugador.check_raise_turn || 0}%`}
+                              onClick={() => toggleStatSelection("Check/Raise Turn", `${jugador.check_raise_turn || 0}%`)}
+                              isSelected={selectedStats["Check/Raise Turn"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaChessKnight}
+                              title="Steal Turn"
+                              value={`${jugador.steal_turn || 0}%`}
+                              onClick={() => toggleStatSelection("Steal Turn", `${jugador.steal_turn || 0}%`)}
+                              isSelected={selectedStats["Steal Turn"] !== undefined}
+                              color={brand.primary}
+                            />
+                          </>
+                        )}
+                      </SimpleGrid>
+                    </Box>
 
-                      {/* Tab Showdown */}
-                      <TabPanel p={4}>
-                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-                          <StatBox
-                            icon={FaPercentage}
-                            title="WWSF"
-                            value={`${jugador.wwsf}%`}
-                            onClick={() => toggleStatSelection("WWSF", `${jugador.wwsf}%`)}
-                            isSelected={selectedStats["WWSF"] !== undefined}
-                            color={brand.primary}
-                          />
-                          <StatBox
-                            icon={FaPercentage}
-                            title="WTSD"
-                            value={`${jugador.wtsd}%`}
-                            onClick={() => toggleStatSelection("WTSD", `${jugador.wtsd}%`)}
-                            isSelected={selectedStats["WTSD"] !== undefined}
-                            color={brand.primary}
-                          />
-                          <StatBox
-                            icon={FaPercentage}
-                            title="WSD"
-                            value={`${jugador.wsd}%`}
-                            onClick={() => toggleStatSelection("WSD", `${jugador.wsd}%`)}
-                            isSelected={selectedStats["WSD"] !== undefined}
-                            color={brand.primary}
-                            isSpecial={parseFloat(jugador.wsd) > 55}
-                          />
-                          {tieneSuscripcionAvanzada && (
-                            <>
-                              <StatBox
-                                icon={FaMedal}
-                                title="WSDwBR %"
-                                value={`${jugador.wsdwbr_pct}%`}
-                                onClick={() => toggleStatSelection("WSDwBR %", `${jugador.wsdwbr_pct}%`)}
-                                isSelected={selectedStats["WSDwBR %"] !== undefined}
-                                color={brand.primary}
-                                isSpecial={parseFloat(jugador.wsdwbr_pct) > 60}
-                              />
-                              <StatBox
-                                icon={FaTrophy}
-                                title="WSD w/OB River"
-                                value={`${jugador.wsdwobr || 0}%`}
-                                onClick={() => toggleStatSelection("WSD w/OB River", `${jugador.wsdwobr || 0}%`)}
-                                isSelected={selectedStats["WSD w/OB River"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaTrophy}
-                                title="WSD w/Raise River"
-                                value={`${jugador.wsdwrr || 0}%`}
-                                onClick={() => toggleStatSelection("WSD w/Raise River", `${jugador.wsdwrr || 0}%`)}
-                                isSelected={selectedStats["WSD w/Raise River"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandshake}
-                                title="Win River Bet Small"
-                                value={`${jugador.wwrb_small || 0}%`}
-                                onClick={() => toggleStatSelection("Win River Bet Small", `${jugador.wwrb_small || 0}%`)}
-                                isSelected={selectedStats["Win River Bet Small"] !== undefined}
-                                color={brand.primary}
-                              />
-                              <StatBox
-                                icon={FaHandshake}
-                                title="Win River Bet Big"
-                                value={`${jugador.wwrb_big || 0}%`}
-                                onClick={() => toggleStatSelection("Win River Bet Big", `${jugador.wwrb_big || 0}%`)}
-                                isSelected={selectedStats["Win River Bet Big"] !== undefined}
-                                color={brand.primary}
-                              />
-                            </>
-                          )}
-                        </SimpleGrid>
-                      </TabPanel>
-                    </TabPanels>
-                  </Tabs>
+                    <Divider />
+
+                    {/* Sección River */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaWater} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>River</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaChartPie}
+                          title="CBet River"
+                          value={`${jugador.cbet_river || 0}%`}
+                          onClick={() => toggleStatSelection("CBet River", `${jugador.cbet_river || 0}%`)}
+                          isSelected={selectedStats["CBet River"] !== undefined}
+                          color={brand.primary}
+                        />
+                        {tieneSuscripcionAvanzada && (
+                          <>
+                            <StatBox
+                              icon={FaWater}
+                              title="Bet River %"
+                              value={`${jugador.bet_river_pct}%`}
+                              onClick={() => toggleStatSelection("Bet River %", `${jugador.bet_river_pct}%`)}
+                              isSelected={selectedStats["Bet River %"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to River Bet"
+                              value={`${jugador.fold_to_river_bet_pct}%`}
+                              onClick={() => toggleStatSelection("Fold to River Bet", `${jugador.fold_to_river_bet_pct}%`)}
+                              isSelected={selectedStats["Fold to River Bet"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaExclamationTriangle}
+                              title="Overbet River %"
+                              value={`${jugador.overbet_river_pct}%`}
+                              onClick={() => toggleStatSelection("Overbet River %", `${jugador.overbet_river_pct}%`)}
+                              isSelected={selectedStats["Overbet River %"] !== undefined}
+                              color={brand.primary}
+                              warning={parseFloat(jugador.overbet_river_pct) > 10}
+                            />
+                            <StatBox
+                              icon={FaArrowDown}
+                              title="Fold to River OB"
+                              value={`${jugador.fold_to_river_overbet || 0}%`}
+                              onClick={() => toggleStatSelection("Fold to River OB", `${jugador.fold_to_river_overbet || 0}%`)}
+                              isSelected={selectedStats["Fold to River OB"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandshake}
+                              title="Bet River & Fold"
+                              value={`${jugador.bet_river_fold || 0}%`}
+                              onClick={() => toggleStatSelection("Bet River & Fold", `${jugador.bet_river_fold || 0}%`)}
+                              isSelected={selectedStats["Bet River & Fold"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaChartPie}
+                              title="Bet River Small"
+                              value={`${jugador.bet_river_small_pot || 0}%`}
+                              onClick={() => toggleStatSelection("Bet River Small", `${jugador.bet_river_small_pot || 0}%`)}
+                              isSelected={selectedStats["Bet River Small"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaChartPie}
+                              title="Bet River Big"
+                              value={`${jugador.bet_river_big_pot || 0}%`}
+                              onClick={() => toggleStatSelection("Bet River Big", `${jugador.bet_river_big_pot || 0}%`)}
+                              isSelected={selectedStats["Bet River Big"] !== undefined}
+                              color={brand.primary}
+                            />
+                          </>
+                        )}
+                      </SimpleGrid>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Sección Showdown */}
+                    <Box>
+                      <HStack mb={3}>
+                        <Icon as={FaTrophy} color={brand.primary} />
+                        <Text fontWeight="bold" color={textColor}>Showdown</Text>
+                      </HStack>
+                      <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
+                        <StatBox
+                          icon={FaPercentage}
+                          title="WWSF"
+                          value={`${jugador.wwsf}%`}
+                          onClick={() => toggleStatSelection("WWSF", `${jugador.wwsf}%`)}
+                          isSelected={selectedStats["WWSF"] !== undefined}
+                          color={brand.primary}
+                        />
+                        <StatBox
+                          icon={FaPercentage}
+                          title="WTSD"
+                          value={`${jugador.wtsd}%`}
+                          onClick={() => toggleStatSelection("WTSD", `${jugador.wtsd}%`)}
+                          isSelected={selectedStats["WTSD"] !== undefined}
+                          color={brand.primary}
+                        />
+                        <StatBox
+                          icon={FaPercentage}
+                          title="WSD"
+                          value={`${jugador.wsd}%`}
+                          onClick={() => toggleStatSelection("WSD", `${jugador.wsd}%`)}
+                          isSelected={selectedStats["WSD"] !== undefined}
+                          color={brand.primary}
+                          isSpecial={parseFloat(jugador.wsd) > 55}
+                        />
+                        {tieneSuscripcionAvanzada && (
+                          <>
+                            <StatBox
+                              icon={FaMedal}
+                              title="WSDwBR %"
+                              value={`${jugador.wsdwbr_pct}%`}
+                              onClick={() => toggleStatSelection("WSDwBR %", `${jugador.wsdwbr_pct}%`)}
+                              isSelected={selectedStats["WSDwBR %"] !== undefined}
+                              color={brand.primary}
+                              isSpecial={parseFloat(jugador.wsdwbr_pct) > 60}
+                            />
+                            <StatBox
+                              icon={FaTrophy}
+                              title="WSD w/OB River"
+                              value={`${jugador.wsdwobr || 0}%`}
+                              onClick={() => toggleStatSelection("WSD w/OB River", `${jugador.wsdwobr || 0}%`)}
+                              isSelected={selectedStats["WSD w/OB River"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaTrophy}
+                              title="WSD w/Raise River"
+                              value={`${jugador.wsdwrr || 0}%`}
+                              onClick={() => toggleStatSelection("WSD w/Raise River", `${jugador.wsdwrr || 0}%`)}
+                              isSelected={selectedStats["WSD w/Raise River"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandshake}
+                              title="Win River Bet Small"
+                              value={`${jugador.wwrb_small || 0}%`}
+                              onClick={() => toggleStatSelection("Win River Bet Small", `${jugador.wwrb_small || 0}%`)}
+                              isSelected={selectedStats["Win River Bet Small"] !== undefined}
+                              color={brand.primary}
+                            />
+                            <StatBox
+                              icon={FaHandshake}
+                              title="Win River Bet Big"
+                              value={`${jugador.wwrb_big || 0}%`}
+                              onClick={() => toggleStatSelection("Win River Bet Big", `${jugador.wwrb_big || 0}%`)}
+                              isSelected={selectedStats["Win River Bet Big"] !== undefined}
+                              color={brand.primary}
+                            />
+                          </>
+                        )}
+                      </SimpleGrid>
+                    </Box>
+                  </VStack>
                 </Box>
                 
                 {/* Gráfico de ganancias */}

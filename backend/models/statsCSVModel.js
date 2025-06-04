@@ -88,6 +88,8 @@ const StatsCSVModel = {
         ON jugadores_stats_csv (fecha_snapshot, tipo_periodo);
       CREATE INDEX IF NOT EXISTS idx_jugadores_stats_csv_hands 
         ON jugadores_stats_csv (hands DESC);
+      CREATE INDEX IF NOT EXISTS idx_jugadores_stats_csv_stake 
+        ON jugadores_stats_csv (stake_category);
     `;
     
     await pool.query(query);
@@ -279,8 +281,8 @@ const StatsCSVModel = {
     return result.rows[0] || null;
   },
 
-  // Buscar jugador por nombre y sala
-  buscarJugador: async (nombre, sala, tipoPeriodo = 'total', fecha = null) => {
+  // ✨ ACTUALIZADA: Buscar jugador por nombre y sala con soporte para stake
+  buscarJugador: async (nombre, sala, tipoPeriodo = 'total', fecha = null, stake = null) => {
     let query = `
       SELECT * FROM jugadores_stats_csv 
       WHERE LOWER(jugador_nombre) = LOWER($1) 
@@ -289,14 +291,21 @@ const StatsCSVModel = {
     `;
     
     let params = [nombre, sala, tipoPeriodo];
+    let paramIndex = 4;
     
     if (fecha) {
-      query += ` AND fecha_snapshot = $4`;
+      query += ` AND fecha_snapshot = $${paramIndex}`;
       params.push(fecha);
-    } else {
-      query += ` ORDER BY fecha_snapshot DESC`;
+      paramIndex++;
     }
     
+    if (stake) {
+      query += ` AND stake_category = $${paramIndex}`;
+      params.push(stake);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY fecha_snapshot DESC`;
     query += ` LIMIT 10`;
     
     const result = await pool.query(query, params);
@@ -343,8 +352,8 @@ const StatsCSVModel = {
     return result.rows;
   },
 
-  // Obtener jugador específico
-  getJugador: async (nombre, sala, tipoPeriodo = 'total', fecha = null) => {
+  // ✨ ACTUALIZADA: Obtener jugador específico con soporte para stake
+  getJugador: async (nombre, sala, tipoPeriodo = 'total', fecha = null, stake = null) => {
     let query = `
       SELECT * FROM jugadores_stats_csv 
       WHERE LOWER(jugador_nombre) = LOWER($1) 
@@ -353,18 +362,89 @@ const StatsCSVModel = {
     `;
     
     let params = [nombre, sala, tipoPeriodo];
+    let paramIndex = 4;
     
     if (fecha) {
-      query += ` AND fecha_snapshot = $4`;
+      query += ` AND fecha_snapshot = $${paramIndex}`;
       params.push(fecha);
-    } else {
-      query += ` ORDER BY fecha_snapshot DESC`;
+      paramIndex++;
     }
     
+    // ✨ NUEVO: Agregar filtro de stake si se proporciona
+    if (stake) {
+      query += ` AND stake_category = $${paramIndex}`;
+      params.push(stake);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY fecha_snapshot DESC`;
     query += ` LIMIT 1`;
     
     const result = await pool.query(query, params);
     return result.rows[0] || null;
+  },
+
+  // ✨ NUEVA FUNCIÓN: Obtener todos los stakes de un jugador
+  getStakesByPlayer: async (nombre, sala, tipoPeriodo = 'total') => {
+    const query = `
+      SELECT 
+        stake_category,
+        SUM(hands) as total_manos,
+        MAX(fecha_snapshot) as ultima_fecha,
+        AVG(bb_100) as bb_100_promedio,
+        SUM(my_c_won) as ganancias_totales
+      FROM jugadores_stats_csv
+      WHERE LOWER(jugador_nombre) = LOWER($1)
+      AND sala = $2
+      AND tipo_periodo = $3
+      GROUP BY stake_category
+      HAVING SUM(hands) > 0
+      ORDER BY SUM(hands) DESC
+    `;
+
+    const result = await pool.query(query, [nombre, sala, tipoPeriodo]);
+    return result.rows;
+  },
+
+  // ✨ NUEVA FUNCIÓN: Verificar si existe un jugador en un stake específico
+  existsInStake: async (nombre, sala, stake, tipoPeriodo = 'total') => {
+    const query = `
+      SELECT EXISTS(
+        SELECT 1 
+        FROM jugadores_stats_csv 
+        WHERE LOWER(jugador_nombre) = LOWER($1) 
+        AND sala = $2 
+        AND stake_category = $3
+        AND tipo_periodo = $4
+        AND hands > 0
+      ) as exists
+    `;
+    
+    const result = await pool.query(query, [nombre, sala, stake, tipoPeriodo]);
+    return result.rows[0].exists;
+  },
+
+  // ✨ NUEVA FUNCIÓN: Obtener estadísticas agregadas por stake
+  getAggregatedStatsByStake: async (nombre, sala) => {
+    const query = `
+      SELECT 
+        stake_category,
+        tipo_periodo,
+        SUM(hands) as total_hands,
+        AVG(vpip) as avg_vpip,
+        AVG(pfr) as avg_pfr,
+        AVG(bb_100) as avg_bb_100,
+        SUM(my_c_won) as total_winnings,
+        COUNT(*) as snapshots_count
+      FROM jugadores_stats_csv
+      WHERE LOWER(jugador_nombre) = LOWER($1)
+      AND sala = $2
+      GROUP BY stake_category, tipo_periodo
+      ORDER BY stake_category, tipo_periodo
+    `;
+
+    const result = await pool.query(query, [nombre, sala]);
+    return result.rows;
   }
 };
 

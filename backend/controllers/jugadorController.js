@@ -7,11 +7,14 @@ const cache = new Map();
 // ✨ Salas válidas ACTUALIZADAS para CSV
 const SALAS_VALIDAS = ['XPK', 'PPP', 'PM'];
 
-// ✨ Función helper para crear clave de caché 
-const createCacheKey = (nombre, sala, tipoPeriodo = 'total', fecha = null) => {
-  const baseKey = `csv-${sala}-${nombre}-${tipoPeriodo}`;
+// ✨ Función helper para crear clave de caché - ACTUALIZADA
+const createCacheKey = (nombre, sala, tipoPeriodo = 'total', fecha = null, stake = null) => {
+  let baseKey = `csv-${sala}-${nombre}-${tipoPeriodo}`;
   if (fecha) {
-    return `${baseKey}-${fecha}`;
+    baseKey += `-${fecha}`;
+  }
+  if (stake) {
+    baseKey += `-${stake}`;
   }
   return baseKey;
 };
@@ -64,11 +67,23 @@ const validarSala = (sala) => {
   return { valido: true };
 };
 
-// ✨ Controlador principal ACTUALIZADO para usar CSV
+// ✨ Función helper para validar stake
+const validarStake = (stake) => {
+  const stakesValidos = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+  if (!stakesValidos.includes(stake)) {
+    return { 
+      valido: false, 
+      error: `Stake no válido. Disponibles: ${stakesValidos.join(', ')}` 
+    };
+  }
+  return { valido: true };
+};
+
+// ✨ Controlador principal ACTUALIZADO para usar CSV con soporte de stake
 const getJugador = async (req, res) => {
   try {
     let { sala, nombre } = req.params;
-    const { tipoPeriodo = 'total', fecha } = req.query;
+    const { tipoPeriodo = 'total', fecha, stake } = req.query; // Agregar stake
 
     // Validaciones básicas
     if (!nombre || !sala) {
@@ -90,8 +105,16 @@ const getJugador = async (req, res) => {
       });
     }
 
+    // ✨ Validar stake si se proporciona
+    if (stake) {
+      const validacionStake = validarStake(stake);
+      if (!validacionStake.valido) {
+        return res.status(400).json({ error: validacionStake.error });
+      }
+    }
+
     nombre = nombre.trim();
-    const cacheKey = createCacheKey(nombre, sala, tipoPeriodo, fecha);
+    const cacheKey = createCacheKey(nombre, sala, tipoPeriodo, fecha, stake);
 
     // ✅ Verificar caché
     if (cache.has(cacheKey)) {
@@ -99,14 +122,14 @@ const getJugador = async (req, res) => {
       return res.status(200).json(cache.get(cacheKey));
     }
 
-    // ⏳ Buscar en CSV
-    console.log(`🔍 CSV Query: ${nombre} en ${sala} (${tipoPeriodo})`);
-    const jugador = await StatsCSVModel.getJugador(nombre, sala, tipoPeriodo, fecha);
+    // ⏳ Buscar en CSV con stake específico
+    console.log(`🔍 CSV Query: ${nombre} en ${sala} (${tipoPeriodo}) stake: ${stake || 'cualquiera'}`);
+    const jugador = await StatsCSVModel.getJugador(nombre, sala, tipoPeriodo, fecha, stake);
 
     if (!jugador) {
       const mensaje = fecha 
-        ? `Jugador '${nombre}' no encontrado en '${sala}' para ${tipoPeriodo} del ${fecha}`
-        : `Jugador '${nombre}' no encontrado en '${sala}' para período '${tipoPeriodo}'`;
+        ? `Jugador '${nombre}' no encontrado en '${sala}' para ${tipoPeriodo} del ${fecha}${stake ? ` y stake ${stake}` : ''}`
+        : `Jugador '${nombre}' no encontrado en '${sala}' para período '${tipoPeriodo}'${stake ? ` y stake ${stake}` : ''}`;
       
       return res.status(404).json({ message: mensaje });
     }
@@ -124,8 +147,8 @@ const getJugador = async (req, res) => {
       vpip: jugador.vpip,
       pfr: jugador.pfr,
       three_bet: jugador.three_bet_pf_no_sqz,
-      fold_to_3bet_pct: jugador.two_bet_pf_fold, // CORREGIDO: 2Bet PF & Fold = Fold to 3-Bet
-      fold_to_4bet_pct: jugador.three_bet_pf_fold, // CORREGIDO: 3Bet PF & Fold = Fold to 4-Bet
+      fold_to_3bet_pct: jugador.two_bet_pf_fold,
+      fold_to_4bet_pct: jugador.three_bet_pf_fold,
       four_bet_preflop_pct: jugador.raise_4bet_plus_pf,
       squeeze: jugador.pf_squeeze,
       
@@ -135,7 +158,7 @@ const getJugador = async (req, res) => {
       cbet_flop: jugador.cbet_f,
       cbet_flop_ip: jugador.cbet_f_non_3b_nmw,
       cbet_flop_oop: jugador.cbet_f_non_3b_nmw_non_sb_vs_bb,
-      fold_to_flop_cbet_pct: jugador.fold_to_f_cbet_non_3b || 0, // CORREGIDO: Usar la nueva columna
+      fold_to_flop_cbet_pct: jugador.fold_to_f_cbet_non_3b || 0,
       float_flop: jugador.float_f,
       
       // Stats turn
@@ -143,7 +166,7 @@ const getJugador = async (req, res) => {
       probe_bet_turn_pct: jugador.probe_t,
       overbet_turn_pct: jugador.t_ob_pct,
       fold_to_turn_overbet: jugador.fold_t_overbet,
-      fold_to_turn_cbet_pct: jugador.fold_to_t_cbet || 0, // CORREGIDO: Usar la nueva columna
+      fold_to_turn_cbet_pct: jugador.fold_to_t_cbet || 0,
       steal_turn: jugador.steal_t,
       check_raise_turn: jugador.xr_turn,
       
@@ -185,7 +208,7 @@ const getJugador = async (req, res) => {
     cache.set(cacheKey, respuesta);
     setTimeout(() => cache.delete(cacheKey), 10 * 60 * 1000);
 
-    console.log(`✅ Encontrado en CSV: ${jugador.jugador_nombre} - ${jugador.hands} manos`);
+    console.log(`✅ Encontrado en CSV: ${jugador.jugador_nombre} - ${jugador.hands} manos - stake: ${jugador.stake_category}`);
     return res.status(200).json(respuesta);
     
   } catch (error) {
@@ -203,9 +226,8 @@ const getJugador = async (req, res) => {
 // ✨ Controlador para obtener ranking por stake ACTUALIZADO para CSV
 const getTopJugadoresPorStake = async (req, res) => {
   const { stake } = req.params;
-  const { tipoPeriodo = 'total', limit = 10 } = req.query;
+  const { tipoPeriodo = 'total', limit = 10, sala } = req.query;
 
-  // USAR DIRECTAMENTE LOS NUEVOS STAKES:
   const stakesValidos = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
   
   if (!stakesValidos.includes(stake)) {
@@ -214,10 +236,18 @@ const getTopJugadoresPorStake = async (req, res) => {
     });
   }
 
+  // Validar sala si se proporciona
+  if (sala) {
+    const validacionSala = validarSala(sala);
+    if (!validacionSala.valido) {
+      return res.status(400).json({ error: validacionSala.error });
+    }
+  }
+
   try {
-    console.log(`🏆 Ranking CSV para ${stake} (${tipoPeriodo})`);
+    console.log(`🏆 Ranking CSV para ${stake} (${tipoPeriodo})${sala ? ` en ${sala}` : ''}`);
     
-    const query = `
+    let query = `
       SELECT 
         jugador_nombre as player_name,
         hands as total_manos,
@@ -231,18 +261,33 @@ const getTopJugadoresPorStake = async (req, res) => {
       FROM jugadores_stats_csv 
       WHERE stake_category = $1 
       AND tipo_periodo = $2
+    `;
+    
+    const params = [stake, tipoPeriodo];
+    let paramIndex = 3;
+    
+    if (sala) {
+      query += ` AND sala = $${paramIndex}`;
+      params.push(sala);
+      paramIndex++;
+    }
+    
+    query += `
       AND fecha_snapshot = (
         SELECT MAX(fecha_snapshot) 
         FROM jugadores_stats_csv 
         WHERE stake_category = $1 AND tipo_periodo = $2
+        ${sala ? `AND sala = $${paramIndex - 1}` : ''}
       )
       AND hands >= 100
       ORDER BY my_c_won DESC 
-      LIMIT $3
+      LIMIT $${paramIndex}
     `;
+    
+    params.push(parseInt(limit));
 
     const pool = require('../config/db');
-    const { rows } = await pool.query(query, [stake, tipoPeriodo, parseInt(limit)]);
+    const { rows } = await pool.query(query, params);
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ 
@@ -260,17 +305,33 @@ const getTopJugadoresPorStake = async (req, res) => {
 // ✨ Controlador de gráfico ACTUALIZADO para usar datos de CSV
 const getGraficoGanancias = async (req, res) => {
   const { nombre } = req.params;
-  const { tipoPeriodo = 'total' } = req.query;
+  const { tipoPeriodo = 'total', sala, stake } = req.query;
 
   if (!nombre) {
     return res.status(400).json({ error: "El nombre del jugador es obligatorio." });
   }
 
+  // Validar sala si se proporciona
+  if (sala) {
+    const validacionSala = validarSala(sala);
+    if (!validacionSala.valido) {
+      return res.status(400).json({ error: validacionSala.error });
+    }
+  }
+
+  // Validar stake si se proporciona
+  if (stake) {
+    const validacionStake = validarStake(stake);
+    if (!validacionStake.valido) {
+      return res.status(400).json({ error: validacionStake.error });
+    }
+  }
+
   try {
-    console.log(`📈 Gráfico CSV: ${nombre} (${tipoPeriodo})`);
+    console.log(`📈 Gráfico CSV: ${nombre} (${tipoPeriodo})${stake ? ` stake: ${stake}` : ''}`);
     
     // Para CSV, vamos a simular datos de gráfico basados en el histórico
-    const query = `
+    let query = `
       SELECT 
         fecha_snapshot,
         my_c_won as total_money_won,
@@ -279,15 +340,31 @@ const getGraficoGanancias = async (req, res) => {
       FROM jugadores_stats_csv 
       WHERE LOWER(jugador_nombre) = LOWER($1)
       AND tipo_periodo = $2
-      ORDER BY fecha_snapshot ASC
     `;
+    
+    const params = [nombre, tipoPeriodo];
+    let paramIndex = 3;
+    
+    if (sala) {
+      query += ` AND sala = $${paramIndex}`;
+      params.push(sala);
+      paramIndex++;
+    }
+    
+    if (stake) {
+      query += ` AND stake_category = $${paramIndex}`;
+      params.push(stake);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY fecha_snapshot ASC`;
 
     const pool = require('../config/db');
-    const { rows } = await pool.query(query, [nombre, tipoPeriodo]);
+    const { rows } = await pool.query(query, params);
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ 
-        error: `No se encontraron datos de gráfico para ${nombre} en período ${tipoPeriodo}` 
+        error: `No se encontraron datos de gráfico para ${nombre} en período ${tipoPeriodo}${stake ? ` y stake ${stake}` : ''}` 
       });
     }
 
@@ -298,7 +375,7 @@ const getGraficoGanancias = async (req, res) => {
     const totalMWSD = [];
 
     rows.forEach((fila, index) => {
-      handGroups.push(index * 100); // Simular grupos de 100 manos
+      handGroups.push(fila.total_hands);
       totalMoneyWon.push(fila.total_money_won);
       // Simular división showdown/no-showdown (aproximación)
       totalMWNSD.push(fila.total_money_won * 0.6);
@@ -312,10 +389,76 @@ const getGraficoGanancias = async (req, res) => {
       totalMWSD,
       data_source: 'CSV',
       tipo_periodo: tipoPeriodo,
-      total_snapshots: rows.length
+      total_snapshots: rows.length,
+      stake: stake || 'todos'
     });
   } catch (error) {
     console.error("❌ Error en gráfico CSV:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+// ✨ NUEVO: Endpoint para obtener todos los stakes de un jugador
+const getStakesJugador = async (req, res) => {
+  const { sala, nombre } = req.params;
+  const { tipoPeriodo = 'total' } = req.query;
+
+  // Validaciones básicas
+  if (!nombre || !sala) {
+    return res.status(400).json({ 
+      error: "El nombre del jugador y la sala son obligatorios." 
+    });
+  }
+
+  // Validar sala
+  const validacionSala = validarSala(sala);
+  if (!validacionSala.valido) {
+    return res.status(400).json({ error: validacionSala.error });
+  }
+
+  try {
+    console.log(`🎲 Buscando todos los stakes para ${nombre} en ${sala}`);
+    
+    const query = `
+      SELECT DISTINCT 
+        stake_category,
+        SUM(hands) as total_manos,
+        MAX(fecha_snapshot) as ultima_fecha,
+        AVG(bb_100) as bb_100_promedio,
+        SUM(my_c_won) as ganancias_totales
+      FROM jugadores_stats_csv
+      WHERE LOWER(jugador_nombre) = LOWER($1)
+      AND sala = $2
+      AND tipo_periodo = $3
+      GROUP BY stake_category
+      HAVING SUM(hands) > 0
+      ORDER BY SUM(hands) DESC
+    `;
+
+    const pool = require('../config/db');
+    const { rows } = await pool.query(query, [nombre, sala, tipoPeriodo]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ 
+        error: `No se encontraron datos para ${nombre} en ${sala}` 
+      });
+    }
+
+    res.status(200).json({
+      jugador: nombre,
+      sala: sala,
+      tipo_periodo: tipoPeriodo,
+      stakes_disponibles: rows.map(row => ({
+        stake: row.stake_category,
+        manos: parseInt(row.total_manos),
+        ultima_fecha: row.ultima_fecha,
+        bb_100_promedio: parseFloat(row.bb_100_promedio).toFixed(2),
+        ganancias_totales: parseFloat(row.ganancias_totales).toFixed(2)
+      }))
+    });
+
+  } catch (error) {
+    console.error("❌ Error obteniendo stakes del jugador:", error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
@@ -337,6 +480,13 @@ const getEstadisticasCache = () => {
       total: Array.from(cache.keys()).filter(key => key.includes('-total')).length,
       semana: Array.from(cache.keys()).filter(key => key.includes('-semana')).length,
       mes: Array.from(cache.keys()).filter(key => key.includes('-mes')).length
+    },
+    entradas_por_stake: {
+      microstakes: Array.from(cache.keys()).filter(key => key.includes('-microstakes')).length,
+      nl100: Array.from(cache.keys()).filter(key => key.includes('-nl100')).length,
+      nl200: Array.from(cache.keys()).filter(key => key.includes('-nl200')).length,
+      nl400: Array.from(cache.keys()).filter(key => key.includes('-nl400')).length,
+      high_stakes: Array.from(cache.keys()).filter(key => key.includes('-high-stakes')).length
     }
   };
 };
@@ -345,6 +495,7 @@ module.exports = {
   getJugador,
   getTopJugadoresPorStake,
   getGraficoGanancias,
+  getStakesJugador,
   limpiarCache,
   getEstadisticasCache
 };
