@@ -122,24 +122,27 @@ router.get("/csv-dashboard", verificarToken, verificarAdmin, async (req, res) =>
         fecha_snapshot,
         tipo_periodo,
         sala,
+        stake_category,  -- Asegúrate de que esto esté aquí
         COUNT(*) as total_jugadores,
-        MAX(processed_at) as ultimo_procesamiento,
-        COUNT(DISTINCT stake_category) as stakes_diferentes
+        MAX(updated_at) as ultimo_procesamiento
       FROM jugadores_stats_csv 
-      GROUP BY fecha_snapshot, tipo_periodo, sala
-      ORDER BY fecha_snapshot DESC, tipo_periodo, sala
+      GROUP BY fecha_snapshot, tipo_periodo, sala, stake_category  -- Y aquí también
+      ORDER BY fecha_snapshot DESC, stake_category, sala
     `;
     
     const { rows } = await pool.query(query);
     
+    // Calcular resumen
+    const resumen = {
+      total_snapshots: rows.length,
+      ultima_fecha: rows[0]?.fecha_snapshot,
+      total_jugadores: rows.reduce((sum, r) => sum + parseInt(r.total_jugadores), 0)
+    };
+    
     res.json({
       success: true,
       archivos_cargados: rows,
-      resumen: {
-        total_snapshots: rows.length,
-        ultima_fecha: rows[0]?.fecha_snapshot,
-        total_jugadores: rows.reduce((sum, r) => sum + parseInt(r.total_jugadores), 0)
-      }
+      resumen: resumen
     });
   } catch (error) {
     console.error("❌ Error en dashboard CSV:", error);

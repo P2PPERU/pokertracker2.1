@@ -34,6 +34,7 @@ import {
   FaChartBar,
   FaSyncAlt,
   FaFileAlt,
+  FaLayerGroup,
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -122,6 +123,28 @@ const CSVDashboard = ({ refreshTrigger }) => {
     }
   };
 
+  const getStakeColor = (stake) => {
+    switch (stake) {
+      case 'microstakes': return 'green';
+      case 'nl100': return 'blue';
+      case 'nl200': return 'purple';
+      case 'nl400': return 'orange';
+      case 'high-stakes': return 'red';
+      default: return 'gray';
+    }
+  };
+
+  const getStakeLabel = (stake) => {
+    switch (stake) {
+      case 'microstakes': return 'Micro';
+      case 'nl100': return 'NL100';
+      case 'nl200': return 'NL200';
+      case 'nl400': return 'NL400';
+      case 'high-stakes': return 'High';
+      default: return stake?.toUpperCase() || 'N/A';
+    }
+  };
+
   if (loading) {
     return (
       <Flex justify="center" align="center" minH="200px">
@@ -144,6 +167,24 @@ const CSVDashboard = ({ refreshTrigger }) => {
       </Alert>
     );
   }
+
+  // Agrupar archivos por fecha y stake
+  const archivosAgrupados = archivos.reduce((acc, archivo) => {
+    const key = `${archivo.fecha_snapshot}-${archivo.stake_category}`;
+    if (!acc[key]) {
+      acc[key] = {
+        fecha_snapshot: archivo.fecha_snapshot,
+        stake_category: archivo.stake_category,
+        archivos: [],
+        total_jugadores: 0,
+        salas: new Set()
+      };
+    }
+    acc[key].archivos.push(archivo);
+    acc[key].total_jugadores += parseInt(archivo.total_jugadores || 0);
+    acc[key].salas.add(archivo.sala);
+    return acc;
+  }, {});
 
   return (
     <VStack spacing={6} align="stretch">
@@ -284,8 +325,13 @@ const CSVDashboard = ({ refreshTrigger }) => {
                   <Th>Fecha Snapshot</Th>
                   <Th>Período</Th>
                   <Th>Sala</Th>
+                  <Th>
+                    <HStack>
+                      <Icon as={FaLayerGroup} />
+                      <Text>Stake</Text>
+                    </HStack>
+                  </Th>
                   <Th>Jugadores</Th>
-                  <Th>Stakes</Th>
                   <Th>Último Procesamiento</Th>
                 </Tr>
               </Thead>
@@ -318,8 +364,22 @@ const CSVDashboard = ({ refreshTrigger }) => {
                         px={2}
                         py={1}
                         borderRadius="md"
+                        variant="outline"
                       >
                         {archivo.sala}
+                      </Badge>
+                    </Td>
+                    
+                    <Td>
+                      <Badge 
+                        colorScheme={getStakeColor(archivo.stake_category)}
+                        px={3}
+                        py={1}
+                        borderRadius="md"
+                        fontSize="sm"
+                        fontWeight="bold"
+                      >
+                        {getStakeLabel(archivo.stake_category)}
                       </Badge>
                     </Td>
                     
@@ -330,12 +390,6 @@ const CSVDashboard = ({ refreshTrigger }) => {
                           {parseInt(archivo.total_jugadores).toLocaleString()}
                         </Text>
                       </HStack>
-                    </Td>
-                    
-                    <Td>
-                      <Badge variant="outline" colorScheme="purple">
-                        {archivo.stakes_diferentes} stakes
-                      </Badge>
                     </Td>
                     
                     <Td>
@@ -359,6 +413,48 @@ const CSVDashboard = ({ refreshTrigger }) => {
         )}
       </Box>
 
+      {/* Resumen por Stake */}
+      <Box>
+        <Text fontSize="md" fontWeight="bold" mb={4}>
+          📊 Resumen por Nivel de Stake
+        </Text>
+        
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} spacing={4}>
+          {['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'].map(stake => {
+            const archivosStake = archivos.filter(a => a.stake_category === stake);
+            const totalJugadores = archivosStake.reduce((sum, a) => sum + parseInt(a.total_jugadores || 0), 0);
+            
+            return (
+              <Box
+                key={stake}
+                bg={cardBg}
+                p={4}
+                borderRadius="lg"
+                border="2px solid"
+                borderColor={archivosStake.length > 0 ? `${getStakeColor(stake)}.300` : borderColor}
+              >
+                <VStack align="start" spacing={2}>
+                  <Badge
+                    colorScheme={getStakeColor(stake)}
+                    fontSize="sm"
+                    px={2}
+                    py={1}
+                  >
+                    {getStakeLabel(stake)}
+                  </Badge>
+                  <Text fontSize="2xl" fontWeight="bold">
+                    {totalJugadores.toLocaleString()}
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    {archivosStake.length} archivo{archivosStake.length !== 1 ? 's' : ''}
+                  </Text>
+                </VStack>
+              </Box>
+            );
+          })}
+        </SimpleGrid>
+      </Box>
+
       {/* Información adicional */}
       <Box
         bg={useColorModeValue("blue.50", "blue.900")}
@@ -375,8 +471,9 @@ const CSVDashboard = ({ refreshTrigger }) => {
         </HStack>
         <VStack align="start" spacing={1} fontSize="xs" color="gray.600">
           <Text>• Los archivos se procesan automáticamente al subirlos</Text>
-          <Text>• Se detectan duplicados por fecha_snapshot + tipo_periodo + sala + jugador</Text>
-          <Text>• Las estadísticas se actualizan en tiempo real</Text>
+          <Text>• El stake se selecciona manualmente al subir cada archivo</Text>
+          <Text>• La sala se detecta automáticamente desde la columna "Site" del CSV</Text>
+          <Text>• Se detectan duplicados por: fecha + período + sala + jugador + stake</Text>
           <Text>• Sistema optimizado para 45+ estadísticas por jugador</Text>
         </VStack>
       </Box>

@@ -57,7 +57,7 @@ export const useCSVManagement = () => {
     }
   }, [getAuthToken]);
 
-  // Subir archivo CSV
+  // Subir archivo CSV - ACTUALIZADO para incluir stake
   const uploadCSV = useCallback(async (csvData) => {
     try {
       setUploading(true);
@@ -68,7 +68,27 @@ export const useCSVManagement = () => {
         throw new Error('No se encontró token de autenticación');
       }
 
-      const { data } = await api.post('/admin/upload-stats-csv', csvData, {
+      // Validar que venga el stake
+      if (!csvData.stake) {
+        throw new Error('El stake es obligatorio');
+      }
+
+      // Validar que venga el contenido CSV
+      if (!csvData.contenidoCSV) {
+        throw new Error('El contenido del CSV es obligatorio');
+      }
+
+      // Validar que vengan los otros campos obligatorios
+      if (!csvData.tipoPeriodo || !csvData.fecha) {
+        throw new Error('Tipo de período y fecha son obligatorios');
+      }
+
+      const { data } = await api.post('/admin/upload-stats-csv', {
+        contenidoCSV: csvData.contenidoCSV,
+        tipoPeriodo: csvData.tipoPeriodo,
+        fecha: csvData.fecha,
+        stake: csvData.stake  // Asegurar que se envíe el stake
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -106,7 +126,7 @@ export const useCSVManagement = () => {
     }
   }, [getAuthToken]);
 
-  // Validar archivo CSV antes de subirlo
+  // Validar archivo CSV antes de subirlo - ACTUALIZADO
   const validateCSV = useCallback((content) => {
     try {
       if (!content || !content.trim()) {
@@ -120,6 +140,8 @@ export const useCSVManagement = () => {
 
       // Validar headers básicos
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      // Headers requeridos - Site es para sala, NO para stake
       const requiredHeaders = ['Site', 'Player', 'Hands', 'BB/100', 'VPIP', 'PFR'];
       
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
@@ -136,23 +158,78 @@ export const useCSVManagement = () => {
         return { valid: false, error: 'No se encontraron datos en el archivo' };
       }
 
+      // Validar que Site tenga valores válidos en algunas filas
+      const sampleLines = dataLines.slice(0, 5); // Revisar primeras 5 líneas
+      const validSites = ['XPK', 'PPP', 'PM', 'ClubGG'];
+      let hasValidSite = false;
+
+      for (const line of sampleLines) {
+        const values = line.split(',').map(v => v.replace(/"/g, '').trim());
+        const siteIndex = headers.indexOf('Site');
+        if (siteIndex >= 0 && values[siteIndex] && validSites.includes(values[siteIndex])) {
+          hasValidSite = true;
+          break;
+        }
+      }
+
+      if (!hasValidSite) {
+        return { 
+          valid: false, 
+          error: 'No se encontraron salas válidas (XPK, PPP, PM) en el archivo' 
+        };
+      }
+
       return { 
         valid: true, 
         info: {
           totalLines: lines.length,
           dataLines: dataLines.length,
-          headers: headers.length
+          headers: headers.length,
+          hasValidSites: hasValidSite
         }
       };
     } catch (error) {
+      console.error('Error validando CSV:', error);
       return { valid: false, error: 'Error validando el archivo CSV' };
     }
+  }, []);
+
+  // Validar stake seleccionado
+  const validateStake = useCallback((stake) => {
+    const validStakes = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+    return validStakes.includes(stake);
   }, []);
 
   // Limpiar errores
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  // Obtener resumen por stake
+  const getStakeSummary = useCallback(() => {
+    if (!dashboard.archivos || dashboard.archivos.length === 0) {
+      return {};
+    }
+
+    const summary = {};
+    const stakes = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+    
+    stakes.forEach(stake => {
+      const archivosStake = dashboard.archivos.filter(a => a.stake_category === stake);
+      summary[stake] = {
+        totalArchivos: archivosStake.length,
+        totalJugadores: archivosStake.reduce((sum, a) => sum + parseInt(a.total_jugadores || 0), 0),
+        salas: [...new Set(archivosStake.map(a => a.sala))],
+        ultimaFecha: archivosStake.length > 0 ? 
+          archivosStake.reduce((latest, a) => {
+            const fecha = new Date(a.fecha_snapshot);
+            return fecha > latest ? fecha : latest;
+          }, new Date(0)).toISOString().split('T')[0] : null
+      };
+    });
+
+    return summary;
+  }, [dashboard.archivos]);
 
   return {
     // Estados
@@ -166,7 +243,9 @@ export const useCSVManagement = () => {
     uploadCSV,
     getUploadStats,
     validateCSV,
+    validateStake,
     clearError,
+    getStakeSummary,
     
     // Datos computados
     hasData: dashboard.archivos.length > 0,

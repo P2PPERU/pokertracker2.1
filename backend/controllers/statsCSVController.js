@@ -6,13 +6,21 @@ const StatsCSVController = {
   // Subir y procesar archivo CSV
   uploadStatsCSV: async (req, res) => {
     try {
-      const { contenidoCSV, tipoPeriodo, fecha, sala } = req.body;
+      const { contenidoCSV, tipoPeriodo, fecha, stake } = req.body; // Recibir stake
       const usuarioId = req.usuario.id;
 
       // Validaciones básicas
-      if (!contenidoCSV || !tipoPeriodo || !fecha) {
+      if (!contenidoCSV || !tipoPeriodo || !fecha || !stake) {
         return res.status(400).json({
-          error: 'contenidoCSV, tipoPeriodo y fecha son obligatorios'
+          error: 'contenidoCSV, tipoPeriodo, fecha y stake son obligatorios'
+        });
+      }
+
+      // Validar stake
+      const stakesValidos = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+      if (!stakesValidos.includes(stake)) {
+        return res.status(400).json({
+          error: `Stake inválido. Valores permitidos: ${stakesValidos.join(', ')}`
         });
       }
 
@@ -22,7 +30,7 @@ const StatsCSVController = {
         });
       }
 
-      console.log(`📊 Iniciando procesamiento CSV: ${tipoPeriodo} - ${fecha}`);
+      console.log(`📊 Iniciando procesamiento CSV: ${tipoPeriodo} - ${fecha} - Stake: ${stake}`);
 
       // Parsear CSV
       const lineas = contenidoCSV.split('\n').filter(linea => linea.trim());
@@ -67,102 +75,114 @@ const StatsCSVController = {
 
       console.log(`🔄 Iniciando procesamiento por batches de ${BATCH_SIZE}...`);
 
-      for (let i = 1; i < lineas.length; i += BATCH_SIZE) {
-        const batch = lineas.slice(i, i + BATCH_SIZE);
-        const jugadoresData = [];
+    for (let i = 1; i < lineas.length; i += BATCH_SIZE) {
+      const batch = lineas.slice(i, i + BATCH_SIZE);
+      const jugadoresData = [];
+      
+      console.log(`📦 Procesando batch ${Math.floor(i/BATCH_SIZE) + 1}: líneas ${i} a ${i + batch.length - 1}`);
+
+      for (let j = 0; j < batch.length; j++) {
+        const linea = batch[j];
+        const lineaNumero = i + j;
         
-        console.log(`📦 Procesando batch ${Math.floor(i/BATCH_SIZE) + 1}: líneas ${i} a ${i + batch.length - 1}`);
-
-        for (let j = 0; j < batch.length; j++) {
-          const linea = batch[j];
-          const lineaNumero = i + j;
-          
-          try {
-            const valores = StatsCSVController.parseCSVLine(linea);
-            
-            // 🔍 DEBUG: Log cada 50 líneas para no saturar
-            if (lineaNumero % 50 === 0 || lineaNumero <= 5) {
-              console.log(`   📝 Línea ${lineaNumero}: ${valores.length} campos vs ${headers.length} headers`);
-            }
-            
-            // ✅ CORREGIDO: Verificar si tienen el mismo número de campos
-            if (valores.length !== headers.length) {
-              if (lineaNumero <= 5) {
-                console.log(`   ⚠️ Línea ${lineaNumero} saltada: ${valores.length} campos ≠ ${headers.length} headers`);
-              }
-              totalRechazados++;
-              continue;
-            }
-
-            const jugadorData = StatsCSVController.mapCSVToJugador(headers, valores);
-            
-            // 🔍 DEBUG: Log del jugador mapeado
-            if (lineaNumero <= 5) {
-              console.log(`   🎯 Jugador mapeado:`, {
-                nombre: jugadorData.jugador_nombre,
-                site: jugadorData.site,
-                hands: jugadorData.hands,
-                bb_100: jugadorData.bb_100
-              });
-            }
-            
-            // Mapear sala y stake
-            jugadorData.sala = StatsCSVModel.mapSala(jugadorData.site);
-            jugadorData.stake_category = StatsCSVModel.mapStakeToCategory(jugadorData.stake_original);
-            
-            // 🔍 DEBUG: Log del mapeo
-            if (lineaNumero <= 5) {
-              console.log(`   🏢 Mapeo: ${jugadorData.site} → ${jugadorData.sala}, stake: ${jugadorData.stake_category}`);
-            }
-            
-            // Validar datos mínimos
-            if (!jugadorData.jugador_nombre || jugadorData.hands < 1) {
-              if (lineaNumero <= 5) {
-                console.log(`   ❌ Jugador rechazado - Nombre: "${jugadorData.jugador_nombre}", Hands: ${jugadorData.hands}`);
-              }
-              totalRechazados++;
-              continue;
-            }
-
-            // Generar hash simple para detección de cambios
-            jugadorData.hash_datos = StatsCSVController.generateSimpleHash(
-              `${jugadorData.jugador_nombre}-${jugadorData.hands}-${jugadorData.bb_100}`
-            );
-
-            jugadoresData.push(jugadorData);
-            totalValidados++;
-            
-            if (lineaNumero <= 5) {
-              console.log(`   ✅ Jugador validado: ${jugadorData.jugador_nombre} (${jugadorData.hands} manos)`);
-            }
-            
-          } catch (error) {
-            totalErrores++;
-            const errorMsg = `Línea ${lineaNumero}: ${error.message}`;
-            errores.push(errorMsg);
-            
-            if (lineaNumero <= 5) {
-              console.log(`   💥 Error en línea ${lineaNumero}:`, error.message);
-            }
+        try {
+        const valores = StatsCSVController.parseCSVLine(linea);
+        
+        // 🔍 DEBUG: Log cada 50 líneas para no saturar
+        if (lineaNumero % 50 === 0 || lineaNumero <= 5) {
+          console.log(`   📝 Línea ${lineaNumero}: ${valores.length} campos vs ${headers.length} headers`);
+        }
+        
+        // ✅ CORREGIDO: Verificar si tienen el mismo número de campos
+        if (valores.length !== headers.length) {
+          if (lineaNumero <= 5) {
+            console.log(`   ⚠️ Línea ${lineaNumero} saltada: ${valores.length} campos ≠ ${headers.length} headers`);
           }
+          totalRechazados++;
+          continue;
         }
 
-        // Insertar batch en BD
-        if (jugadoresData.length > 0) {
-          console.log(`💾 Insertando batch de ${jugadoresData.length} jugadores en BD...`);
-          
-          try {
-            await StatsCSVModel.upsertBatch(fecha, tipoPeriodo, jugadoresData);
-            totalProcesados += jugadoresData.length;
-            console.log(`✅ Batch insertado exitosamente: ${jugadoresData.length} jugadores`);
-          } catch (dbError) {
-            console.log(`❌ Error insertando batch:`, dbError.message);
-            totalErrores += jugadoresData.length;
+        const jugadorData = StatsCSVController.mapCSVToJugador(headers, valores);
+        
+        // 🔍 DEBUG: Log del jugador mapeado
+        if (lineaNumero <= 5) {
+          console.log(`   🎯 Jugador mapeado:`, {
+            nombre: jugadorData.jugador_nombre,
+            site: jugadorData.site,
+            hands: jugadorData.hands,
+            bb_100: jugadorData.bb_100
+          });
+        }
+        
+        // 🔑 CAMBIO CLAVE: Mapear sala desde Site, pero stake desde parámetro
+        jugadorData.sala = StatsCSVModel.mapSala(jugadorData.site);
+        jugadorData.stake_category = stake; // Usar el stake del request, NO del CSV
+        jugadorData.stake_original = stake; // Guardar referencia original
+        
+        // 🔍 DEBUG: Log del mapeo
+        if (lineaNumero <= 5) {
+          console.log(`   🏢 Mapeo: ${jugadorData.site} → ${jugadorData.sala}, stake: ${jugadorData.stake_category}`);
+        }
+        
+        // Validar datos mínimos
+        if (!jugadorData.jugador_nombre || jugadorData.hands < 1) {
+          if (lineaNumero <= 5) {
+            console.log(`   ❌ Jugador rechazado - Nombre: "${jugadorData.jugador_nombre}", Hands: ${jugadorData.hands}`);
           }
-        } else {
-          console.log(`⚠️ Batch vacío, no hay jugadores para insertar`);
+          totalRechazados++;
+          continue;
+        }
+
+        // Generar hash simple para detección de cambios
+        jugadorData.hash_datos = StatsCSVController.generateSimpleHash(
+          `${jugadorData.jugador_nombre}-${jugadorData.hands}-${jugadorData.bb_100}-${stake}`
+        );
+
+        jugadoresData.push(jugadorData);
+        totalValidados++;
+        
+        if (lineaNumero <= 5) {
+          console.log(`   ✅ Jugador validado: ${jugadorData.jugador_nombre} (${jugadorData.hands} manos)`);
+        }
+        
+        } catch (error) {
+        totalErrores++;
+        const errorMsg = `Línea ${lineaNumero}: ${error.message}`;
+        errores.push(errorMsg);
+        
+        if (lineaNumero <= 5) {
+          console.log(`   💥 Error en línea ${lineaNumero}:`, error.message);
+        }
         }
       }
+
+      // Insertar batch en BD
+      if (jugadoresData.length > 0) {
+        console.log(`💾 Insertando batch de ${jugadoresData.length} jugadores en BD...`);
+        
+        // 🔍 AGREGAR ESTE LOG DE VERIFICACIÓN:
+        console.log('🔍 Verificando stakes antes de insertar:', 
+        jugadoresData.slice(0, 3).map(j => ({
+          nombre: j.jugador_nombre,
+          stake_category: j.stake_category,
+          stake_original: j.stake_original,
+          sala: j.sala,
+          site: j.site
+        }))
+        );
+        
+        try {
+        await StatsCSVModel.upsertBatch(fecha, tipoPeriodo, jugadoresData);
+        totalProcesados += jugadoresData.length;
+        console.log(`✅ Batch insertado exitosamente: ${jugadoresData.length} jugadores`);
+        } catch (dbError) {
+        console.log(`❌ Error insertando batch:`, dbError.message);
+        totalErrores += jugadoresData.length;
+        }
+      } else {
+        console.log(`⚠️ Batch vacío, no hay jugadores para insertar`);
+      }
+    }
 
       // 📊 RESUMEN FINAL
       console.log(`📊 RESUMEN DEL PROCESAMIENTO:`);
@@ -171,11 +191,13 @@ const StatsCSVController = {
       console.log(`   ❌ Jugadores rechazados: ${totalRechazados}`);
       console.log(`   💾 Jugadores procesados: ${totalProcesados}`);
       console.log(`   💥 Errores totales: ${totalErrores}`);
+      console.log(`   🎯 Stake aplicado: ${stake}`);
 
       // Log del evento
       EventLogger.log(usuarioId, 'csv_upload', {
         tipo_periodo: tipoPeriodo,
         fecha: fecha,
+        stake: stake, // Incluir stake en el log
         total_procesados: totalProcesados,
         total_errores: totalErrores,
         total_validados: totalValidados,
@@ -191,7 +213,8 @@ const StatsCSVController = {
           total_validados: totalValidados,
           total_rechazados: totalRechazados,
           fecha_snapshot: fecha,
-          tipo_periodo: tipoPeriodo
+          tipo_periodo: tipoPeriodo,
+          stake_procesado: stake // Confirmar el stake procesado
         },
         errores: errores.slice(0, 10) // Solo primeros 10 errores
       });
@@ -303,9 +326,6 @@ const StatsCSVController = {
       }
     });
 
-    // Guardar stake original para mapeo
-    jugador.stake_original = jugador.site; // Temporal, se extrae del site o contexto
-    
     return jugador;
   },
 

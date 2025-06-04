@@ -32,19 +32,19 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaInfo,
+  FaChartBar,
 } from 'react-icons/fa';
-import { useCSVManagement } from '../../../hooks/admin/useCSVManagement';
+import api from '../../../services/api';
 
 const CSVUploader = ({ onUploadSuccess }) => {
   const [archivo, setArchivo] = useState(null);
   const [tipoPeriodo, setTipoPeriodo] = useState('total');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [stakeSeleccionado, setStakeSeleccionado] = useState('');
   const [contenidoCSV, setContenidoCSV] = useState('');
   const [validacion, setValidacion] = useState(null);
   const [resultado, setResultado] = useState(null);
-
-  // Hook personalizado para gestión CSV
-  const { uploadCSV, uploading, validateCSV, clearError } = useCSVManagement();
+  const [uploading, setUploading] = useState(false);
 
   // Colores
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -56,6 +56,37 @@ const CSVUploader = ({ onUploadSuccess }) => {
 
   const toast = useToast();
 
+  // Validar CSV
+  const validateCSV = (content) => {
+    if (!content) return null;
+
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      return { valid: false, error: 'El archivo debe tener al menos headers y una fila de datos' };
+    }
+
+    // Parsear headers
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const requiredHeaders = ['Site', 'Player', 'Hands', 'BB/100', 'VPIP', 'PFR'];
+    
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+      return { 
+        valid: false, 
+        error: `Headers faltantes: ${missingHeaders.join(', ')}` 
+      };
+    }
+
+    return {
+      valid: true,
+      info: {
+        headers: headers.length,
+        totalLines: lines.length,
+        dataLines: lines.length - 1
+      }
+    };
+  };
+
   // Validar contenido cuando cambie
   useEffect(() => {
     if (contenidoCSV) {
@@ -64,7 +95,7 @@ const CSVUploader = ({ onUploadSuccess }) => {
     } else {
       setValidacion(null);
     }
-  }, [contenidoCSV, validateCSV]);
+  }, [contenidoCSV]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -82,7 +113,6 @@ const CSVUploader = ({ onUploadSuccess }) => {
 
     setArchivo(file);
     setResultado(null);
-    clearError();
 
     // Leer el contenido del archivo
     const reader = new FileReader();
@@ -103,6 +133,17 @@ const CSVUploader = ({ onUploadSuccess }) => {
       return;
     }
 
+    // Validar stake
+    if (!stakeSeleccionado) {
+      toast({
+        title: 'Error',
+        description: 'Debes seleccionar un stake',
+        status: 'error',
+        duration: 3000
+      });
+      return;
+    }
+
     if (!tipoPeriodo || !fecha) {
       toast({
         title: 'Error',
@@ -113,40 +154,46 @@ const CSVUploader = ({ onUploadSuccess }) => {
       return;
     }
 
-    const result = await uploadCSV({
-      contenidoCSV,
-      tipoPeriodo,
-      fecha,
-      sala: 'AUTO' // Se detecta automáticamente del CSV
-    });
+    try {
+      setUploading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await api.post('/admin/upload-stats-csv', {
+        contenidoCSV,
+        tipoPeriodo,
+        fecha,
+        stake: stakeSeleccionado  // Enviar el stake seleccionado
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-    if (result.success) {
-      setResultado(result.data);
+      const result = response.data;
+      setResultado(result);
       
       toast({
         title: 'CSV procesado exitosamente',
-        description: `${result.data.estadisticas.total_procesados} jugadores procesados`,
+        description: `${result.estadisticas.total_procesados} jugadores procesados para ${stakeSeleccionado.toUpperCase()}`,
         status: 'success',
         duration: 5000
       });
 
       // Limpiar formulario
-      setArchivo(null);
-      setContenidoCSV('');
-      setTipoPeriodo('total');
-      setValidacion(null);
+      resetForm();
       
       // Notificar al componente padre
       if (onUploadSuccess) {
         onUploadSuccess();
       }
-    } else {
+    } catch (error) {
+      console.error('Error:', error);
       toast({
         title: 'Error',
-        description: result.error,
+        description: error.response?.data?.error || 'Error al procesar el archivo',
         status: 'error',
         duration: 5000
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -156,8 +203,8 @@ const CSVUploader = ({ onUploadSuccess }) => {
     setResultado(null);
     setValidacion(null);
     setTipoPeriodo('total');
+    setStakeSeleccionado('');
     setFecha(new Date().toISOString().split('T')[0]);
-    clearError();
   };
 
   return (
@@ -195,7 +242,7 @@ const CSVUploader = ({ onUploadSuccess }) => {
           borderColor={useColorModeValue("blue.200", "blue.700")}
         >
           <Text fontSize="sm" fontWeight="bold" mb={3}>
-            🎯 Categorías de Stakes (Auto-detectadas)
+            🎯 Niveles de Stakes Disponibles
           </Text>
           
           <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} spacing={2}>
@@ -291,6 +338,34 @@ const CSVUploader = ({ onUploadSuccess }) => {
             )}
           </FormControl>
 
+          {/* Selector de Stake - NUEVO */}
+          <FormControl isRequired>
+            <FormLabel>
+              <HStack>
+                <Icon as={FaChartBar} color="orange.500" />
+                <Text>Nivel de Stake</Text>
+                <Text color="red.500">*</Text>
+              </HStack>
+            </FormLabel>
+            <Select
+              value={stakeSeleccionado}
+              onChange={(e) => setStakeSeleccionado(e.target.value)}
+              bg={inputBg}
+              placeholder="Selecciona el stake del archivo"
+              borderColor={stakeSeleccionado ? "green.300" : borderColor}
+              _hover={{ borderColor: "blue.300" }}
+            >
+              <option value="microstakes">Microstakes (NL10, NL25, NL50)</option>
+              <option value="nl100">NL100 ($0.50/$1)</option>
+              <option value="nl200">NL200 ($1/$2)</option>
+              <option value="nl400">NL400 ($2/$4)</option>
+              <option value="high-stakes">High Stakes (NL1K+)</option>
+            </Select>
+            <FormHelperText>
+              Este stake se aplicará a TODOS los jugadores del archivo
+            </FormHelperText>
+          </FormControl>
+
           {/* Configuración */}
           <HStack spacing={4}>
             <FormControl flex={1}>
@@ -349,6 +424,11 @@ const CSVUploader = ({ onUploadSuccess }) => {
                         <Badge colorScheme="blue">
                           {validacion.info.headers} columnas
                         </Badge>
+                        {stakeSeleccionado && (
+                          <Badge colorScheme="orange">
+                            Stake: {stakeSeleccionado.toUpperCase()}
+                          </Badge>
+                        )}
                       </HStack>
                     ) : (
                       <Text fontSize="sm" color="red.600" mt={1}>
@@ -394,19 +474,21 @@ const CSVUploader = ({ onUploadSuccess }) => {
         <HStack spacing={3}>
           <Button
             leftIcon={uploading ? <Spinner size="sm" /> : <FaUpload />}
-            colorScheme={validacion?.valid ? "blue" : "gray"}
+            colorScheme={validacion?.valid && stakeSeleccionado ? "blue" : "gray"}
             onClick={handleUpload}
             isLoading={uploading}
             loadingText="Procesando..."
-            isDisabled={!validacion?.valid || uploading}
+            isDisabled={!validacion?.valid || !stakeSeleccionado || uploading}
             flex={1}
             size="lg"
           >
             {!contenidoCSV 
               ? "Selecciona un archivo CSV" 
+              : !stakeSeleccionado
+                ? "Selecciona un stake"
               : !validacion?.valid 
                 ? "Archivo inválido" 
-                : `Procesar ${validacion.info?.dataLines || 0} registros`
+                : `Procesar ${validacion.info?.dataLines || 0} registros como ${stakeSeleccionado.toUpperCase()}`
             }
           </Button>
           
@@ -466,6 +548,10 @@ const CSVUploader = ({ onUploadSuccess }) => {
                     <Badge colorScheme="purple">Fecha:</Badge>
                     <Text fontSize="sm">{resultado.estadisticas.fecha_snapshot}</Text>
                   </HStack>
+                  <HStack>
+                    <Badge colorScheme="orange">Stake:</Badge>
+                    <Text fontSize="sm">{resultado.estadisticas.stake_procesado?.toUpperCase()}</Text>
+                  </HStack>
                 </VStack>
               )}
               {resultado.errores && resultado.errores.length > 0 && (
@@ -490,20 +576,21 @@ const CSVUploader = ({ onUploadSuccess }) => {
         {/* Información adicional */}
         <Box
           p={4}
-          bg={useColorModeValue("blue.50", "blue.900")}
+          bg={useColorModeValue("gray.50", "gray.900")}
           borderRadius="md"
           border="1px solid"
-          borderColor={useColorModeValue("blue.200", "blue.700")}
+          borderColor={useColorModeValue("gray.200", "gray.700")}
         >
           <Text fontSize="sm" fontWeight="bold" mb={2}>
             📋 Formato esperado del CSV:
           </Text>
           <VStack align="start" spacing={1} fontSize="xs" color="gray.600">
-            <Text>• Headers: Site, Player, Stake, Hands, BB/100, VPIP, PFR, etc.</Text>
-            <Text>• Salas soportadas: XPK, PPP, PM (detectadas automáticamente)</Text>
-            <Text>• Stakes categorizados automáticamente según big blind</Text>
+            <Text>• Headers: Site, Player, Hands, BB/100, VPIP, PFR, y más estadísticas</Text>
+            <Text>• Columna Site: identifica la sala (XPK, PPP, PM) - detección automática</Text>
+            <Text>• Stake: seleccionado manualmente por el admin al subir</Text>
             <Text>• Se procesan en lotes de 1000 jugadores para optimizar rendimiento</Text>
-            <Text>• Sistema elimina duplicados automáticamente (mismo jugador + stake)</Text>
+            <Text>• Sistema elimina duplicados automáticamente</Text>
+            <Text>• Un archivo puede contener jugadores de múltiples salas</Text>
           </VStack>
         </Box>
 

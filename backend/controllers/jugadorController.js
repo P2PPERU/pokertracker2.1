@@ -201,23 +201,17 @@ const getTopJugadoresPorStake = async (req, res) => {
   const { stake } = req.params;
   const { tipoPeriodo = 'total', limit = 10 } = req.query;
 
-  // Mapear stake numérico a categoría
-  const stakeCategories = {
-    '0.5': '0.5-1',
-    '1': '1-2', 
-    '2': '2-4',
-    '5': '5-10'
-  };
-
-  const stakeCategory = stakeCategories[stake];
-  if (!stakeCategory) {
+  // USAR DIRECTAMENTE LOS NUEVOS STAKES:
+  const stakesValidos = ['microstakes', 'nl100', 'nl200', 'nl400', 'high-stakes'];
+  
+  if (!stakesValidos.includes(stake)) {
     return res.status(400).json({ 
-      error: "Stake no válido. Disponibles: 0.5, 1, 2, 5" 
+      error: `Stake no válido. Disponibles: ${stakesValidos.join(', ')}` 
     });
   }
 
   try {
-    console.log(`🏆 Ranking CSV para ${stakeCategory} (${tipoPeriodo})`);
+    console.log(`🏆 Ranking CSV para ${stake} (${tipoPeriodo})`);
     
     const query = `
       SELECT 
@@ -244,7 +238,7 @@ const getTopJugadoresPorStake = async (req, res) => {
     `;
 
     const pool = require('../config/db');
-    const { rows } = await pool.query(query, [stakeCategory, tipoPeriodo, parseInt(limit)]);
+    const { rows } = await pool.query(query, [stake, tipoPeriodo, parseInt(limit)]);  // Cambiar stakeCategory por stake
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ 
@@ -258,6 +252,7 @@ const getTopJugadoresPorStake = async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
+
 
 // ✨ Controlador de gráfico ACTUALIZADO para usar datos de CSV
 const getGraficoGanancias = async (req, res) => {

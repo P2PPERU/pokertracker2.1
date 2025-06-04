@@ -3,7 +3,7 @@ const pool = require('../config/db');
 
 const StatsCSVModel = {
   // Crear tabla si no existe
-  initTable: async () => {
+  createTable: async () => {
     const query = `
       CREATE TABLE IF NOT EXISTS jugadores_stats_csv (
         id SERIAL PRIMARY KEY,
@@ -97,37 +97,20 @@ const StatsCSVModel = {
       'XPK': 'XPK',
       'PPP': 'PPP', 
       'PM': 'PM',
-      'ClubGG': 'PM'
+      'ClubGG': 'PM' // ClubGG se mapea a PM
     };
     
     return salaMap[site] || site;
   },
 
-  // 🆕 ACTUALIZADO: Mapear stake a categoría optimizada
+  // 🔴 REMOVIDA/COMENTADA - Ya no se usa porque el stake viene del frontend
+  /*
   mapStakeToCategory: (stakeOriginal) => {
-    if (!stakeOriginal) return 'unknown';
-    
-    // Extraer el número principal del stake (ej: "$1 NL", "$2 Ante NL", etc.)
-    const match = stakeOriginal.match(/\$(\d+(?:\.\d+)?)/);
-    if (!match) return 'unknown';
-    
-    const stakeValue = parseFloat(match[1]);
-    
-    // 🆕 NUEVO: Categorización optimizada por big blind
-    if (stakeValue < 1) {
-      return 'microstakes';     // NL10 ($0.05/$0.10), NL25 ($0.10/$0.25), NL50 ($0.25/$0.50)
-    } else if (stakeValue === 1) {
-      return 'nl100';           // NL100 ($0.50/$1.00)
-    } else if (stakeValue === 2) {
-      return 'nl200';           // NL200 ($1/$2)  
-    } else if (stakeValue === 4) {
-      return 'nl400';           // NL400 ($2/$4)
-    } else if (stakeValue > 4) {
-      return 'high-stakes';     // NL1000+ ($5/$10, $10/$20, etc.)
-    }
-    
+    // FUNCIÓN DEPRECADA - El stake ahora se recibe como parámetro del frontend
+    // Mantenida solo por referencia histórica
     return 'unknown';
   },
+  */
 
   // Insertar/actualizar batch de jugadores
   upsertBatch: async (fechaSnapshot, tipoPeriodo, jugadores) => {
@@ -252,11 +235,12 @@ const StatsCSVModel = {
         fecha_snapshot,
         tipo_periodo,
         sala,
+        stake_category,
         COUNT(*) as total_jugadores,
         COUNT(DISTINCT stake_category) as stakes_diferentes,
         MAX(updated_at) as ultimo_procesamiento
       FROM jugadores_stats_csv 
-      GROUP BY fecha_snapshot, tipo_periodo, sala
+      GROUP BY fecha_snapshot, tipo_periodo, sala, stake_category
       ORDER BY fecha_snapshot DESC, tipo_periodo, sala
     `;
 
@@ -286,11 +270,12 @@ const StatsCSVModel = {
         fecha_snapshot,
         tipo_periodo,
         sala,
+        stake_category,
         COUNT(*) as total_jugadores,
         AVG(hands) as promedio_manos,
         MAX(updated_at) as ultimo_procesamiento
       FROM jugadores_stats_csv 
-      GROUP BY fecha_snapshot, tipo_periodo, sala
+      GROUP BY fecha_snapshot, tipo_periodo, sala, stake_category
       ORDER BY fecha_snapshot DESC, ultimo_procesamiento DESC
       LIMIT 1
     `;
@@ -361,6 +346,30 @@ const StatsCSVModel = {
     
     const result = await pool.query(query, [stakeCategory, tipoPeriodo, limite]);
     return result.rows;
+  },
+
+  // Obtener jugador específico
+  getJugador: async (nombre, sala, tipoPeriodo = 'total', fecha = null) => {
+    let query = `
+      SELECT * FROM jugadores_stats_csv 
+      WHERE LOWER(jugador_nombre) = LOWER($1) 
+      AND sala = $2 
+      AND tipo_periodo = $3
+    `;
+    
+    let params = [nombre, sala, tipoPeriodo];
+    
+    if (fecha) {
+      query += ` AND fecha_snapshot = $4`;
+      params.push(fecha);
+    } else {
+      query += ` ORDER BY fecha_snapshot DESC`;
+    }
+    
+    query += ` LIMIT 1`;
+    
+    const result = await pool.query(query, params);
+    return result.rows[0] || null;
   }
 };
 
