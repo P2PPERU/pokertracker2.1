@@ -79,6 +79,78 @@ const validarStake = (stake) => {
   return { valido: true };
 };
 
+// ✨ Función helper para formatear datos del jugador
+const formatearDatosJugador = (jugador) => {
+  return {
+    // Datos básicos del jugador
+    player_name: jugador.jugador_nombre,
+    total_manos: jugador.hands,
+    bb_100: jugador.bb_100,
+    all_in_adj_bb_100: jugador.all_in_adj_bb_100,
+    win_usd: jugador.my_c_won,
+    
+    // Stats preflop
+    vpip: jugador.vpip,
+    pfr: jugador.pfr,
+    three_bet: jugador.three_bet_pf_no_sqz,
+    fold_to_3bet_pct: jugador.two_bet_pf_fold,
+    fold_to_4bet_pct: jugador.three_bet_pf_fold,
+    four_bet_preflop_pct: jugador.raise_4bet_plus_pf,
+    squeeze: jugador.pf_squeeze,
+    
+    // Stats flop
+    donk_flop: jugador.donk_f,
+    check_raise_flop: jugador.xr_flop,
+    cbet_flop: jugador.cbet_f,
+    cbet_flop_ip: jugador.cbet_f_non_3b_nmw,
+    cbet_flop_oop: jugador.cbet_f_non_3b_nmw_non_sb_vs_bb,
+    fold_to_flop_cbet_pct: jugador.fold_to_f_cbet_non_3b || 0,
+    float_flop: jugador.float_f,
+    
+    // Stats turn
+    cbet_turn: jugador.cbet_t,
+    probe_bet_turn_pct: jugador.probe_t,
+    overbet_turn_pct: jugador.t_ob_pct,
+    fold_to_turn_overbet: jugador.fold_t_overbet,
+    fold_to_turn_cbet_pct: jugador.fold_to_t_cbet || 0,
+    steal_turn: jugador.steal_t,
+    check_raise_turn: jugador.xr_turn,
+    
+    // Stats river
+    cbet_river: jugador.cbet_r,
+    bet_river_pct: jugador.bet_r,
+    fold_to_river_bet_pct: jugador.fold_r_bet,
+    overbet_river_pct: jugador.r_ovb_pct,
+    fold_to_river_overbet: jugador.fold_r_overbet,
+    bet_river_fold: jugador.bet_r_fold,
+    bet_river_small_pot: jugador.bet_r_small_pot,
+    bet_river_big_pot: jugador.bet_r_big_pot,
+    
+    // Stats showdown
+    wwsf: jugador.wwsf,
+    wsd: jugador.wsd,
+    wtsd: jugador.wsd, // Usando WSD como WTSD temporalmente
+    wsdwbr_pct: jugador.wsdwbr,
+    wsdwobr: jugador.wsdwobr,
+    wsdwrr: jugador.wsdwrr,
+    wwrb_small: jugador.wwrb_small,
+    wwrb_big: jugador.wwrb_big,
+    
+    // Stats limp
+    limp_pct: jugador.limp,
+    limp_fold_pct: jugador.limp_fold,
+    limp_raise_pct: jugador.limp_raise,
+    
+    // Metadata del CSV
+    data_source: 'CSV',
+    fecha_snapshot: jugador.fecha_snapshot,
+    tipo_periodo: jugador.tipo_periodo,
+    stake_category: jugador.stake_category,
+    stake_original: jugador.stake_original,
+    processed_at: jugador.processed_at || new Date().toISOString()
+  };
+};
+
 // ✨ Controlador principal ACTUALIZADO para usar CSV con soporte de stake
 const getJugador = async (req, res) => {
   try {
@@ -135,74 +207,7 @@ const getJugador = async (req, res) => {
     }
 
     // ✅ Respuesta usando TODOS los stats del CSV con mapeo CORREGIDO
-    const respuesta = {
-      // Datos básicos del jugador
-      player_name: jugador.jugador_nombre,
-      total_manos: jugador.hands,
-      bb_100: jugador.bb_100,
-      all_in_adj_bb_100: jugador.all_in_adj_bb_100,
-      win_usd: jugador.my_c_won,
-      
-      // Stats preflop
-      vpip: jugador.vpip,
-      pfr: jugador.pfr,
-      three_bet: jugador.three_bet_pf_no_sqz,
-      fold_to_3bet_pct: jugador.two_bet_pf_fold,
-      fold_to_4bet_pct: jugador.three_bet_pf_fold,
-      four_bet_preflop_pct: jugador.raise_4bet_plus_pf,
-      squeeze: jugador.pf_squeeze,
-      
-      // Stats flop
-      donk_flop: jugador.donk_f,
-      check_raise_flop: jugador.xr_flop,
-      cbet_flop: jugador.cbet_f,
-      cbet_flop_ip: jugador.cbet_f_non_3b_nmw,
-      cbet_flop_oop: jugador.cbet_f_non_3b_nmw_non_sb_vs_bb,
-      fold_to_flop_cbet_pct: jugador.fold_to_f_cbet_non_3b || 0,
-      float_flop: jugador.float_f,
-      
-      // Stats turn
-      cbet_turn: jugador.cbet_t,
-      probe_bet_turn_pct: jugador.probe_t,
-      overbet_turn_pct: jugador.t_ob_pct,
-      fold_to_turn_overbet: jugador.fold_t_overbet,
-      fold_to_turn_cbet_pct: jugador.fold_to_t_cbet || 0,
-      steal_turn: jugador.steal_t,
-      check_raise_turn: jugador.xr_turn,
-      
-      // Stats river
-      cbet_river: jugador.cbet_r,
-      bet_river_pct: jugador.bet_r,
-      fold_to_river_bet_pct: jugador.fold_r_bet,
-      overbet_river_pct: jugador.r_ovb_pct,
-      fold_to_river_overbet: jugador.fold_r_overbet,
-      bet_river_fold: jugador.bet_r_fold,
-      bet_river_small_pot: jugador.bet_r_small_pot,
-      bet_river_big_pot: jugador.bet_r_big_pot,
-      
-      // Stats showdown
-      wwsf: jugador.wwsf,
-      wsd: jugador.wsd,
-      wtsd: jugador.wsd, // Usando WSD como WTSD temporalmente
-      wsdwbr_pct: jugador.wsdwbr,
-      wsdwobr: jugador.wsdwobr,
-      wsdwrr: jugador.wsdwrr,
-      wwrb_small: jugador.wwrb_small,
-      wwrb_big: jugador.wwrb_big,
-      
-      // Stats limp
-      limp_pct: jugador.limp,
-      limp_fold_pct: jugador.limp_fold,
-      limp_raise_pct: jugador.limp_raise,
-      
-      // Metadata del CSV
-      data_source: 'CSV',
-      fecha_snapshot: jugador.fecha_snapshot,
-      tipo_periodo: jugador.tipo_periodo,
-      stake_category: jugador.stake_category,
-      stake_original: jugador.stake_original,
-      processed_at: jugador.processed_at || new Date().toISOString()
-    };
+    const respuesta = formatearDatosJugador(jugador);
 
     // ✅ Caché por 10 minutos para datos CSV
     cache.set(cacheKey, respuesta);
@@ -398,7 +403,7 @@ const getGraficoGanancias = async (req, res) => {
   }
 };
 
-// ✨ NUEVO: Endpoint para obtener todos los stakes de un jugador
+// ✨ ACTUALIZADO: Endpoint para obtener todos los stakes de un jugador con datos completos
 const getStakesJugador = async (req, res) => {
   const { sala, nombre } = req.params;
   const { tipoPeriodo = 'total' } = req.query;
@@ -419,42 +424,49 @@ const getStakesJugador = async (req, res) => {
   try {
     console.log(`🎲 Buscando todos los stakes para ${nombre} en ${sala}`);
     
-    const query = `
-      SELECT DISTINCT 
-        stake_category,
-        SUM(hands) as total_manos,
-        MAX(fecha_snapshot) as ultima_fecha,
-        AVG(bb_100) as bb_100_promedio,
-        SUM(my_c_won) as ganancias_totales
-      FROM jugadores_stats_csv
-      WHERE LOWER(jugador_nombre) = LOWER($1)
-      AND sala = $2
-      AND tipo_periodo = $3
-      GROUP BY stake_category
-      HAVING SUM(hands) > 0
-      ORDER BY SUM(hands) DESC
-    `;
-
-    const pool = require('../config/db');
-    const { rows } = await pool.query(query, [nombre, sala, tipoPeriodo]);
-
-    if (!rows || rows.length === 0) {
+    // Primero obtener los stakes disponibles con resumen
+    const stakesResumen = await StatsCSVModel.getStakesByPlayer(nombre, sala, tipoPeriodo);
+    
+    if (!stakesResumen || stakesResumen.length === 0) {
       return res.status(404).json({ 
         error: `No se encontraron datos para ${nombre} en ${sala}` 
       });
     }
 
+    // Ahora obtener los datos completos para cada stake encontrado
+    const stakesConDatosCompletos = [];
+    
+    for (const stakeInfo of stakesResumen) {
+      const jugadorData = await StatsCSVModel.getJugador(
+        nombre, 
+        sala, 
+        tipoPeriodo, 
+        stakeInfo.ultima_fecha, 
+        stakeInfo.stake_category
+      );
+      
+      if (jugadorData) {
+        stakesConDatosCompletos.push({
+          stake: stakeInfo.stake_category,
+          manos: parseInt(stakeInfo.total_manos),
+          ultima_fecha: stakeInfo.ultima_fecha,
+          bb_100_promedio: parseFloat(stakeInfo.bb_100_promedio).toFixed(2),
+          ganancias_totales: parseFloat(stakeInfo.ganancias_totales).toFixed(2),
+          // Incluir todos los datos del jugador formateados
+          data: formatearDatosJugador(jugadorData)
+        });
+      }
+    }
+
+    // Ordenar por cantidad de manos (mayor a menor)
+    stakesConDatosCompletos.sort((a, b) => b.manos - a.manos);
+
     res.status(200).json({
       jugador: nombre,
       sala: sala,
       tipo_periodo: tipoPeriodo,
-      stakes_disponibles: rows.map(row => ({
-        stake: row.stake_category,
-        manos: parseInt(row.total_manos),
-        ultima_fecha: row.ultima_fecha,
-        bb_100_promedio: parseFloat(row.bb_100_promedio).toFixed(2),
-        ganancias_totales: parseFloat(row.ganancias_totales).toFixed(2)
-      }))
+      total_stakes: stakesConDatosCompletos.length,
+      stakes_disponibles: stakesConDatosCompletos
     });
 
   } catch (error) {

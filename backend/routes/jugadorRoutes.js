@@ -200,31 +200,18 @@ router.get("/jugador/:sala/:nombre/analisis", verificarToken, async (req, res) =
 
     // ✨ Guardar análisis actualizado CSV
     try {
-      // Crear tabla si no existe
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS analisis_guardados_csv (
-          id SERIAL PRIMARY KEY,
-          player_name VARCHAR(255) NOT NULL,
-          sala VARCHAR(10) NOT NULL,
-          tipo_periodo VARCHAR(20) NOT NULL,
-          fecha_snapshot DATE,
-          analisis TEXT NOT NULL,
-          total_manos INTEGER,
-          fecha_creacion TIMESTAMP DEFAULT NOW(),
-          fecha_actualizacion TIMESTAMP DEFAULT NOW(),
-          UNIQUE(player_name, sala, tipo_periodo, COALESCE(fecha_snapshot::text, ''))
-        )
-      `);
-
+      // Ya no necesitamos crear la tabla porque ya la creaste manualmente
+      
       await pool.query(`
         INSERT INTO analisis_guardados_csv (player_name, sala, tipo_periodo, fecha_snapshot, analisis, total_manos)
         VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (player_name, sala, tipo_periodo, COALESCE(fecha_snapshot::text, ''))
+        ON CONFLICT (player_name, sala, tipo_periodo, fecha_snapshot)
         DO UPDATE SET 
           analisis = EXCLUDED.analisis, 
           total_manos = EXCLUDED.total_manos,
           fecha_actualizacion = NOW()
-      `, [nombre, sala, tipoPeriodo, fecha, nuevoAnalisis.analisis, totalActualManos]);
+      `, [nombre, sala, tipoPeriodo, fecha || null, nuevoAnalisis.analisis, totalActualManos]);
+      
     } catch (dbError) {
       console.warn("⚠️ Error guardando análisis CSV (continuando):", dbError.message);
     }

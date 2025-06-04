@@ -90,6 +90,8 @@ const StatsCSVModel = {
         ON jugadores_stats_csv (hands DESC);
       CREATE INDEX IF NOT EXISTS idx_jugadores_stats_csv_stake 
         ON jugadores_stats_csv (stake_category);
+      CREATE INDEX IF NOT EXISTS idx_jugadores_stats_csv_jugador_sala 
+        ON jugadores_stats_csv (LOWER(jugador_nombre), sala, tipo_periodo);
     `;
     
     await pool.query(query);
@@ -384,7 +386,7 @@ const StatsCSVModel = {
     return result.rows[0] || null;
   },
 
-  // ✨ NUEVA FUNCIÓN: Obtener todos los stakes de un jugador
+  // ✨ FUNCIÓN MEJORADA: Obtener todos los stakes de un jugador con más información
   getStakesByPlayer: async (nombre, sala, tipoPeriodo = 'total') => {
     const query = `
       SELECT 
@@ -392,7 +394,9 @@ const StatsCSVModel = {
         SUM(hands) as total_manos,
         MAX(fecha_snapshot) as ultima_fecha,
         AVG(bb_100) as bb_100_promedio,
-        SUM(my_c_won) as ganancias_totales
+        SUM(my_c_won) as ganancias_totales,
+        COUNT(*) as snapshots_count,
+        MIN(fecha_snapshot) as primera_fecha
       FROM jugadores_stats_csv
       WHERE LOWER(jugador_nombre) = LOWER($1)
       AND sala = $2
@@ -441,6 +445,63 @@ const StatsCSVModel = {
       AND sala = $2
       GROUP BY stake_category, tipo_periodo
       ORDER BY stake_category, tipo_periodo
+    `;
+
+    const result = await pool.query(query, [nombre, sala]);
+    return result.rows;
+  },
+
+  // ✨ NUEVA FUNCIÓN: Obtener jugadores con múltiples stakes
+  getPlayersWithMultipleStakes: async (sala, tipoPeriodo = 'total', minStakes = 2) => {
+    const query = `
+      SELECT 
+        jugador_nombre,
+        COUNT(DISTINCT stake_category) as stakes_count,
+        SUM(hands) as total_hands_all_stakes,
+        AVG(bb_100) as avg_bb_100_all_stakes,
+        STRING_AGG(DISTINCT stake_category, ', ' ORDER BY stake_category) as stakes_played
+      FROM jugadores_stats_csv
+      WHERE sala = $1
+      AND tipo_periodo = $2
+      GROUP BY jugador_nombre
+      HAVING COUNT(DISTINCT stake_category) >= $3
+      ORDER BY total_hands_all_stakes DESC
+      LIMIT 100
+    `;
+
+    const result = await pool.query(query, [sala, tipoPeriodo, minStakes]);
+    return result.rows;
+  },
+
+  // ✨ NUEVA FUNCIÓN: Estadísticas comparativas entre stakes
+  getComparativeStatsByStake: async (nombre, sala) => {
+    const query = `
+      WITH stake_stats AS (
+        SELECT 
+          stake_category,
+          AVG(vpip) as vpip,
+          AVG(pfr) as pfr,
+          AVG(three_bet_pf_no_sqz) as three_bet,
+          AVG(bb_100) as bb_100,
+          SUM(hands) as total_hands,
+          MAX(fecha_snapshot) as last_played
+        FROM jugadores_stats_csv
+        WHERE LOWER(jugador_nombre) = LOWER($1)
+        AND sala = $2
+        GROUP BY stake_category
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN stake_category = 'microstakes' THEN 1
+          WHEN stake_category = 'nl100' THEN 2
+          WHEN stake_category = 'nl200' THEN 3
+          WHEN stake_category = 'nl400' THEN 4
+          WHEN stake_category = 'high-stakes' THEN 5
+          ELSE 6
+        END as stake_order
+      FROM stake_stats
+      ORDER BY stake_order
     `;
 
     const result = await pool.query(query, [nombre, sala]);

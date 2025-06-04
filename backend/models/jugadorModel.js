@@ -122,7 +122,7 @@ Usa TODAS las estadísticas para identificar patrones, inconsistencias y spots d
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // ✨ Usar modelo más potente
       messages: [{ role: "system", content: prompt }],
       max_tokens: 600, // ✨ Aumentado para análisis más detallado
     });
