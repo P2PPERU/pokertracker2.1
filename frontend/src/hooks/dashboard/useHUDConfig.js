@@ -53,13 +53,30 @@ export const useHUDConfig = () => {
 
   // Actualizar orden de estadísticas
   const updateStatOrder = useCallback((section, newOrder) => {
-    setHudConfig(prev => ({
-      ...prev,
-      statOrder: {
-        ...prev.statOrder,
-        [section]: newOrder
-      }
-    }));
+    setHudConfig(prev => {
+      // Obtener todas las stats de la sección
+      const allSectionStats = ALL_STATS[section] || [];
+      const allStatIds = allSectionStats.map(s => s.id);
+      
+      // Crear el orden completo manteniendo las stats no visibles al final
+      const completeOrder = [...newOrder];
+      allStatIds.forEach(id => {
+        if (!completeOrder.includes(id)) {
+          completeOrder.push(id);
+        }
+      });
+      
+      const newConfig = {
+        ...prev,
+        statOrder: {
+          ...prev.statOrder,
+          [section]: completeOrder
+        }
+      };
+      // Guardar inmediatamente en localStorage
+      localStorage.setItem('hudConfig', JSON.stringify(newConfig));
+      return newConfig;
+    });
   }, []);
 
   // Resetear configuración
@@ -69,13 +86,38 @@ export const useHUDConfig = () => {
 
   // Obtener stats visibles y ordenadas
   const getVisibleOrderedStats = useCallback((section, tieneSuscripcionAvanzada) => {
-    const visibleIds = hudConfig.visibleStats[section];
-    const orderedIds = hudConfig.statOrder[section];
+    const visibleIds = hudConfig.visibleStats[section] || [];
+    const orderedIds = hudConfig.statOrder[section] || [];
+    const sectionStats = ALL_STATS[section] || [];
     
-    return orderedIds
-      .filter(id => visibleIds.includes(id))
-      .map(id => ALL_STATS[section].find(stat => stat.id === id))
-      .filter(stat => stat && (!stat.premium || tieneSuscripcionAvanzada));
+    // Crear un mapa para acceso rápido
+    const statsMap = {};
+    sectionStats.forEach(stat => {
+      statsMap[stat.id] = stat;
+    });
+    
+    // Primero incluir las stats en el orden especificado
+    const orderedStats = [];
+    orderedIds.forEach(id => {
+      if (visibleIds.includes(id) && statsMap[id]) {
+        const stat = statsMap[id];
+        if (!stat.premium || tieneSuscripcionAvanzada) {
+          orderedStats.push(stat);
+        }
+      }
+    });
+    
+    // Luego agregar cualquier stat visible que no esté en el orden
+    visibleIds.forEach(id => {
+      if (!orderedIds.includes(id) && statsMap[id]) {
+        const stat = statsMap[id];
+        if (!stat.premium || tieneSuscripcionAvanzada) {
+          orderedStats.push(stat);
+        }
+      }
+    });
+    
+    return orderedStats;
   }, [hudConfig]);
 
   return {

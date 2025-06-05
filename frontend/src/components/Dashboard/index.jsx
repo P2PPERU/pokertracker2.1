@@ -71,6 +71,7 @@ const Dashboard = () => {
     hudConfig,
     setHudConfig,
     getVisibleOrderedStats,
+    updateStatOrder,
   } = useHUDConfig();
 
   const {
@@ -194,6 +195,7 @@ const Dashboard = () => {
                   toggleStatSelection={toggleStatSelection}
                   selectedStats={selectedStats}
                   onConfigOpen={onConfigOpen}
+                  updateStatOrder={updateStatOrder}
                 />
                 
                 {/* Botón de copiar y leyenda */}
