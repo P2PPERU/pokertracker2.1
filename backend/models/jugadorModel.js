@@ -87,6 +87,7 @@ Eres un jugador profesional de cash online. Analiza estadísticas COMPLETAS de u
 🏆 SHOWDOWN & WINRATES:
 - WWSF: ${jugador.wwsf || 0}% (Won when saw flop)
 - WSD: ${jugador.wsd || 0}% (Won at showdown)
+- WTSD: ${jugador.wtsd || 0}% (Went to showdown)
 - WSDWBR: ${jugador.wsdwbr || 0}% (Won showdown when bet river)
 - WSDWOBR: ${jugador.wsdwobr || 0}% (Won showdown when overbet river)
 - WSDWRR: ${jugador.wsdwrr || 0}% (Won showdown when raise river)

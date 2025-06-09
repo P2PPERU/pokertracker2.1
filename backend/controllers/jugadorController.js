@@ -129,7 +129,7 @@ const formatearDatosJugador = (jugador) => {
     // Stats showdown
     wwsf: jugador.wwsf,
     wsd: jugador.wsd,
-    wtsd: jugador.wsd, // Usando WSD como WTSD temporalmente
+    wtsd: jugador.wtsd, // Usando WSD como WTSD temporalmente
     wsdwbr_pct: jugador.wsdwbr,
     wsdwobr: jugador.wsdwobr,
     wsdwrr: jugador.wsdwrr,

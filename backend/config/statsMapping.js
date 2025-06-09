@@ -245,6 +245,12 @@ const STATS_MAPPING = {
     category: 'showdown',
     description: 'Won at ShowDown'
   },
+  'WTSD %': {
+    dbField: 'wtsd',
+    frontendField: 'wtsd',
+    category: 'showdown',
+    description: 'Went to ShowDown'
+  },
   'WSDWBR': {
     dbField: 'wsdwbr',
     frontendField: 'wsdwbr_pct',

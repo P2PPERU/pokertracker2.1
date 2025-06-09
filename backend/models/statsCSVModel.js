@@ -44,6 +44,7 @@ const StatsCSVModel = {
         -- Stats showdown
         wwsf DECIMAL(5,2) DEFAULT 0,
         wsd DECIMAL(5,2) DEFAULT 0,
+        wtsd DECIMAL(5,2) DEFAULT 0,
         wsdwbr DECIMAL(5,2) DEFAULT 0,
         wsdwobr DECIMAL(5,2) DEFAULT 0,
         wsdwrr DECIMAL(5,2) DEFAULT 0,
@@ -128,16 +129,16 @@ const StatsCSVModel = {
             site, all_in_adj_bb_100, bb_100, my_c_won, hands,
             vpip, pfr, three_bet_pf_no_sqz, three_bet_pf_fold, two_bet_pf_fold,
             raise_4bet_plus_pf, pf_squeeze, donk_f, xr_flop, cbet_f_non_3b_nmw_non_sb_vs_bb,
-            cbet_f_non_3b_nmw, cbet_f, fold_to_f_cbet_non_3b, float_f, cbet_t, cbet_r, wwsf, wsd, probe_t,
-            t_ob_pct, fold_t_overbet, fold_to_t_cbet, fold_r_overbet, steal_t, xr_turn, limp_fold,
-            limp, limp_raise, bet_r, fold_r_bet, wsdwbr, r_ovb_pct, wsdwobr,
-            wsdwrr, bet_r_fold, bet_r_small_pot, wwrb_small, bet_r_big_pot, wwrb_big,
-            hash_datos, updated_at
+            cbet_f_non_3b_nmw, cbet_f, fold_to_f_cbet_non_3b, float_f, cbet_t, cbet_r, 
+            wwsf, wsd, wtsd, probe_t, t_ob_pct, fold_t_overbet, fold_to_t_cbet, 
+            fold_r_overbet, steal_t, xr_turn, limp_fold, limp, limp_raise, bet_r, 
+            fold_r_bet, wsdwbr, r_ovb_pct, wsdwobr, wsdwrr, bet_r_fold, 
+            bet_r_small_pot, wwrb_small, bet_r_big_pot, wwrb_big, hash_datos, updated_at
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
             $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
             $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44,
-            $45, $46, $47, $48, $49, $50, $51, CURRENT_TIMESTAMP
+            $45, $46, $47, $48, $49, $50, $51, $52, CURRENT_TIMESTAMP
           )
           ON CONFLICT (fecha_snapshot, tipo_periodo, sala, jugador_nombre, stake_category)
           DO UPDATE SET
@@ -165,6 +166,7 @@ const StatsCSVModel = {
             cbet_r = EXCLUDED.cbet_r,
             wwsf = EXCLUDED.wwsf,
             wsd = EXCLUDED.wsd,
+            wtsd = EXCLUDED.wtsd,
             probe_t = EXCLUDED.probe_t,
             t_ob_pct = EXCLUDED.t_ob_pct,
             fold_t_overbet = EXCLUDED.fold_t_overbet,
@@ -196,19 +198,16 @@ const StatsCSVModel = {
           jugador.my_c_won, jugador.hands, jugador.vpip, jugador.pfr, jugador.three_bet_pf_no_sqz,
           jugador.three_bet_pf_fold, jugador.two_bet_pf_fold, jugador.raise_4bet_plus_pf,
           jugador.pf_squeeze, jugador.donk_f, jugador.xr_flop, jugador.cbet_f_non_3b_nmw_non_sb_vs_bb,
-          jugador.cbet_f_non_3b_nmw, jugador.cbet_f, jugador.fold_to_f_cbet_non_3b || 0, jugador.float_f, jugador.cbet_t,
-          jugador.cbet_r, jugador.wwsf, jugador.wsd, jugador.probe_t, jugador.t_ob_pct,
-          jugador.fold_t_overbet, jugador.fold_to_t_cbet || 0, jugador.fold_r_overbet, jugador.steal_t, jugador.xr_turn,
-          jugador.limp_fold, jugador.limp, jugador.limp_raise, jugador.bet_r, jugador.fold_r_bet,
-          jugador.wsdwbr, jugador.r_ovb_pct, jugador.wsdwobr, jugador.wsdwrr, jugador.bet_r_fold,
-          jugador.bet_r_small_pot, jugador.wwrb_small, jugador.bet_r_big_pot, jugador.wwrb_big,
-          jugador.hash_datos
+          jugador.cbet_f_non_3b_nmw, jugador.cbet_f, jugador.fold_to_f_cbet_non_3b || 0, jugador.float_f, 
+          jugador.cbet_t, jugador.cbet_r, jugador.wwsf, jugador.wsd, jugador.wtsd, jugador.probe_t, 
+          jugador.t_ob_pct, jugador.fold_t_overbet, jugador.fold_to_t_cbet || 0, jugador.fold_r_overbet, 
+          jugador.steal_t, jugador.xr_turn, jugador.limp_fold, jugador.limp, jugador.limp_raise, 
+          jugador.bet_r, jugador.fold_r_bet, jugador.wsdwbr, jugador.r_ovb_pct, jugador.wsdwobr, 
+          jugador.wsdwrr, jugador.bet_r_fold, jugador.bet_r_small_pot, jugador.wwrb_small, 
+          jugador.bet_r_big_pot, jugador.wwrb_big, jugador.hash_datos
         ];
 
         const result = await client.query(query, values);
-        
-        // No hay forma directa de saber si fue INSERT o UPDATE en PostgreSQL
-        // pero podemos asumir que se procesó correctamente
         insertados++;
       }
 
