@@ -1,4 +1,4 @@
-// frontend/src/components/Dashboard/index.js
+// frontend/src/components/Dashboard/index.jsx
 
 import React from 'react';
 import {
@@ -17,7 +17,7 @@ import { FaSearch } from "react-icons/fa";
 import DashboardHeader from './DashboardHeader';
 import PlayerSearch from './PlayerSearch';
 import PlayerInfo from './PlayerInfo';
-import { HUDDisplay, HUDConfigModal } from './HUD';
+import { HUDDisplay, HUDConfigModal, ColorLegend } from './HUD';
 import { StatsCopyButton } from './StatsPanel';
 import GraficoGanancias from '../GraficoGanancias';
 import AnalisisJugador from '../AnalisisJugador';
@@ -186,6 +186,9 @@ const Dashboard = () => {
                 flex={{ base: "1", lg: "4" }} 
                 maxW={{ base: "100%", lg: "70%" }}
               >
+                {/* 🎨 NUEVO: Leyenda de colores personalizados */}
+                <ColorLegend />
+                
                 <HUDDisplay
                   jugador={jugador}
                   stakeSeleccionado={stakeSeleccionado}

@@ -31,9 +31,10 @@ import {
   AccordionPanel,
   AccordionIcon,
 } from '@chakra-ui/react';
-import { FaCog, FaCopy, FaGripVertical } from 'react-icons/fa';
+import { FaCog, FaCopy, FaGripVertical, FaPalette } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { ALL_STATS, DEFAULT_HUD_CONFIG } from '../../../constants/dashboard/hudConstants';
+import ColorCustomizationPanel from './ColorCustomizationPanel';
 
 // Función para generar IDs únicos para drag and drop
 const getDraggableId = (section, statId) => `${section}::${statId}`;
@@ -157,9 +158,9 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
   const [expandedSections, setExpandedSections] = useState([]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="6xl">
       <ModalOverlay />
-      <ModalContent>
+      <ModalContent maxW="90vw" maxH="90vh">
         <ModalHeader>
           <HStack>
             <Icon as={FaCog} />
@@ -168,12 +169,18 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
         </ModalHeader>
         <ModalCloseButton />
         
-        <ModalBody>
+        <ModalBody overflowY="auto">
           <Tabs>
             <TabList>
               <Tab>Visibilidad</Tab>
               <Tab>Auto-Copiar</Tab>
               <Tab>Orden</Tab>
+              <Tab>
+                <HStack>
+                  <Icon as={FaPalette} />
+                  <Text>Colores</Text>
+                </HStack>
+              </Tab>
             </TabList>
 
             <TabPanels>
@@ -348,6 +355,11 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                     </Accordion>
                   </DragDropContext>
                 </VStack>
+              </TabPanel>
+
+              {/* Nuevo Panel de Colores */}
+              <TabPanel>
+                <ColorCustomizationPanel tieneSuscripcionAvanzada={tieneSuscripcionAvanzada} />
               </TabPanel>
             </TabPanels>
           </Tabs>
