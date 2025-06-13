@@ -25,70 +25,80 @@ import {
   Checkbox,
   Badge,
   Icon,
-  Accordion,
-  AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
+  useToast,
 } from '@chakra-ui/react';
-import { FaCog, FaCopy, FaGripVertical, FaPalette } from 'react-icons/fa';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { FaCog, FaCopy, FaPalette } from 'react-icons/fa';
 import { ALL_STATS, DEFAULT_HUD_CONFIG } from '../../../constants/dashboard/hudConstants';
 import ColorCustomizationPanel from './ColorCustomizationPanel';
 
-// Función para generar IDs únicos para drag and drop
-const getDraggableId = (section, statId) => `${section}::${statId}`;
-const parseDroppableId = (draggableId) => {
-  const [section, statId] = draggableId.split('::');
-  return { section, statId };
+// Función para validar y limpiar la configuración
+const cleanAndValidateConfig = (config) => {
+  const cleanConfig = JSON.parse(JSON.stringify(config || DEFAULT_HUD_CONFIG));
+  
+  // Asegurar que todas las estructuras existan
+  if (!cleanConfig.statOrder) cleanConfig.statOrder = {};
+  if (!cleanConfig.visibleStats) cleanConfig.visibleStats = {};
+  if (!cleanConfig.autoCopyStats) cleanConfig.autoCopyStats = [];
+  
+  // Verificar y limpiar cada sección
+  Object.keys(ALL_STATS).forEach(section => {
+    // Limpiar statOrder
+    if (!cleanConfig.statOrder[section]) {
+      cleanConfig.statOrder[section] = ALL_STATS[section].map(stat => stat.id);
+    } else {
+      // Eliminar duplicados y stats inválidos
+      const validStats = ALL_STATS[section].map(s => s.id);
+      const uniqueStats = [...new Set(cleanConfig.statOrder[section])];
+      cleanConfig.statOrder[section] = uniqueStats.filter(id => validStats.includes(id));
+      
+      // Agregar stats faltantes al final
+      validStats.forEach(id => {
+        if (!cleanConfig.statOrder[section].includes(id)) {
+          cleanConfig.statOrder[section].push(id);
+        }
+      });
+    }
+    
+    // Limpiar visibleStats
+    if (!cleanConfig.visibleStats[section]) {
+      cleanConfig.visibleStats[section] = [];
+    } else {
+      const validStats = ALL_STATS[section].map(s => s.id);
+      const uniqueStats = [...new Set(cleanConfig.visibleStats[section])];
+      cleanConfig.visibleStats[section] = uniqueStats.filter(id => validStats.includes(id));
+    }
+  });
+  
+  // Limpiar autoCopyStats
+  if (Array.isArray(cleanConfig.autoCopyStats)) {
+    const allValidStats = Object.values(ALL_STATS).flatMap(stats => stats.map(s => s.id));
+    const uniqueAutoCopy = [...new Set(cleanConfig.autoCopyStats)];
+    cleanConfig.autoCopyStats = uniqueAutoCopy.filter(id => allValidStats.includes(id));
+  } else {
+    cleanConfig.autoCopyStats = [];
+  }
+  
+  return cleanConfig;
 };
 
 const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscripcionAvanzada }) => {
-  const [localConfig, setLocalConfig] = useState(() => {
-    // Asegurar que la configuración inicial tenga la estructura correcta
-    const config = JSON.parse(JSON.stringify(hudConfig || DEFAULT_HUD_CONFIG));
-    
-    // Verificar que todas las secciones existan en statOrder
-    Object.keys(ALL_STATS).forEach(section => {
-      if (!config.statOrder) config.statOrder = {};
-      if (!config.visibleStats) config.visibleStats = {};
-      if (!config.autoCopyStats) config.autoCopyStats = [];
-      
-      if (!config.statOrder[section]) {
-        config.statOrder[section] = ALL_STATS[section].map(stat => stat.id);
-      }
-      if (!config.visibleStats[section]) {
-        config.visibleStats[section] = [];
-      }
-    });
-    
-    return config;
-  });
+  const toast = useToast();
+  const [localConfig, setLocalConfig] = useState(() => cleanAndValidateConfig(hudConfig));
   
   // Reinicializar configuración local cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
-      const config = JSON.parse(JSON.stringify(hudConfig || DEFAULT_HUD_CONFIG));
-      
-      // Verificar que todas las secciones existan
-      Object.keys(ALL_STATS).forEach(section => {
-        if (!config.statOrder) config.statOrder = {};
-        if (!config.visibleStats) config.visibleStats = {};
-        if (!config.autoCopyStats) config.autoCopyStats = [];
-        
-        if (!config.statOrder[section]) {
-          config.statOrder[section] = ALL_STATS[section].map(stat => stat.id);
-        }
-        if (!config.visibleStats[section]) {
-          config.visibleStats[section] = [];
-        }
-      });
-      
-      setLocalConfig(config);
+      const cleanConfig = cleanAndValidateConfig(hudConfig);
+      setLocalConfig(cleanConfig);
     }
   }, [isOpen, hudConfig]);
   
   const handleStatVisibilityToggle = (section, statId) => {
+    if (!statId || typeof statId !== 'string') {
+      console.error('Invalid statId:', statId);
+      return;
+    }
+    
     setLocalConfig(prev => {
       const newConfig = { ...prev };
       const visibleStats = [...(newConfig.visibleStats[section] || [])];
@@ -106,6 +116,11 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
   };
 
   const handleAutoCopyToggle = (statId) => {
+    if (!statId || typeof statId !== 'string') {
+      console.error('Invalid statId:', statId);
+      return;
+    }
+    
     setLocalConfig(prev => {
       const newConfig = { ...prev };
       const autoCopyStats = [...(newConfig.autoCopyStats || [])];
@@ -122,40 +137,43 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
     });
   };
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-
-    const sourceSection = result.source.droppableId;
-    const destSection = result.destination.droppableId;
-
-    // Solo permitir drag & drop dentro de la misma sección
-    if (sourceSection !== destSection) return;
-
-    setLocalConfig(prev => {
-      const newConfig = JSON.parse(JSON.stringify(prev));
-      const items = [...(newConfig.statOrder[sourceSection] || [])];
-      
-      const [reorderedItem] = items.splice(result.source.index, 1);
-      items.splice(result.destination.index, 0, reorderedItem);
-      
-      newConfig.statOrder[sourceSection] = items;
-      return newConfig;
-    });
-  };
-
   const saveConfig = () => {
-    setHudConfig(localConfig);
-    localStorage.setItem('hudConfig', JSON.stringify(localConfig));
-    onClose();
+    try {
+      const cleanConfig = cleanAndValidateConfig(localConfig);
+      setHudConfig(cleanConfig);
+      localStorage.setItem('hudConfig', JSON.stringify(cleanConfig));
+      onClose();
+      
+      toast({
+        title: 'Configuración guardada',
+        description: 'Tu configuración del HUD ha sido guardada correctamente',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error saving config:', error);
+      toast({
+        title: 'Error al guardar',
+        description: 'Hubo un problema al guardar la configuración',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const resetConfig = () => {
-    const defaultConfig = JSON.parse(JSON.stringify(DEFAULT_HUD_CONFIG));
-    setLocalConfig(defaultConfig);
+    if (window.confirm('¿Estás seguro de que quieres restaurar la configuración por defecto?')) {
+      const defaultConfig = cleanAndValidateConfig(DEFAULT_HUD_CONFIG);
+      setLocalConfig(defaultConfig);
+      
+      toast({
+        title: 'Configuración restaurada',
+        description: 'Se ha restaurado la configuración por defecto',
+        status: 'info',
+        duration: 3000,
+      });
+    }
   };
-
-  // Estado para controlar qué sección está expandida (para evitar múltiples DnD contexts activos)
-  const [expandedSections, setExpandedSections] = useState([]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="6xl">
@@ -174,7 +192,6 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
             <TabList>
               <Tab>Visibilidad</Tab>
               <Tab>Auto-Copiar</Tab>
-              <Tab>Orden</Tab>
               <Tab>
                 <HStack>
                   <Icon as={FaPalette} />
@@ -199,6 +216,8 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                       </Text>
                       <SimpleGrid columns={3} spacing={2}>
                         {stats.map(stat => {
+                          if (!stat || !stat.id) return null;
+                          
                           const isVisible = (localConfig.visibleStats[section] || []).includes(stat.id);
                           const isPremium = stat.premium && !tieneSuscripcionAvanzada;
                           
@@ -206,7 +225,7 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                             <Checkbox
                               key={stat.id}
                               isChecked={isVisible}
-                              onChange={() => !isPremium && handleStatVisibilityToggle(section, stat.id)}
+                              onChange={() => !isPremium && stat.id && handleStatVisibilityToggle(section, stat.id)}
                               isDisabled={isPremium}
                             >
                               <HStack spacing={1}>
@@ -239,6 +258,8 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                       </Text>
                       <SimpleGrid columns={3} spacing={2}>
                         {stats.map(stat => {
+                          if (!stat || !stat.id) return null;
+                          
                           const isAutoCopy = (localConfig.autoCopyStats || []).includes(stat.id);
                           const isPremium = stat.premium && !tieneSuscripcionAvanzada;
                           
@@ -246,7 +267,7 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                             <Checkbox
                               key={stat.id}
                               isChecked={isAutoCopy}
-                              onChange={() => !isPremium && handleAutoCopyToggle(stat.id)}
+                              onChange={() => !isPremium && stat.id && handleAutoCopyToggle(stat.id)}
                               isDisabled={isPremium}
                             >
                               <HStack spacing={1}>
@@ -265,104 +286,21 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                 </VStack>
               </TabPanel>
 
-              {/* Panel de Orden - Con un solo DragDropContext */}
-              <TabPanel>
-                <VStack align="stretch" spacing={4}>
-                  <Alert status="info" fontSize="sm">
-                    <AlertIcon />
-                    Arrastra y suelta para reorganizar las estadísticas
-                  </Alert>
-                  
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Accordion 
-                      allowMultiple 
-                      onChange={(expandedIndex) => setExpandedSections(expandedIndex)}
-                    >
-                      {Object.entries(ALL_STATS).map(([section, stats], sectionIndex) => (
-                        <AccordionItem key={section}>
-                          <h2>
-                            <AccordionButton>
-                              <Box flex="1" textAlign="left" fontWeight="bold" textTransform="capitalize">
-                                {section}
-                              </Box>
-                              <AccordionIcon />
-                            </AccordionButton>
-                          </h2>
-                          <AccordionPanel pb={4}>
-                            {/* Solo renderizar Droppable si la sección está expandida */}
-                            {expandedSections.includes(sectionIndex) && (
-                              <Droppable droppableId={section}>
-                                {(provided, snapshot) => (
-                                  <VStack
-                                    {...provided.droppableProps}
-                                    ref={provided.innerRef}
-                                    spacing={2}
-                                    align="stretch"
-                                    bg={snapshot.isDraggingOver ? "blue.50" : "transparent"}
-                                    p={2}
-                                    borderRadius="md"
-                                    transition="background-color 0.2s"
-                                    minH="50px"
-                                  >
-                                    {(localConfig.statOrder[section] || [])
-                                      .filter(statId => {
-                                        // Solo incluir stats que existen en ALL_STATS
-                                        return stats.some(s => s.id === statId);
-                                      })
-                                      .map((statId, index) => {
-                                        const stat = stats.find(s => s.id === statId);
-                                        if (!stat) return null;
-                                        
-                                        const uniqueId = getDraggableId(section, statId);
-                                        
-                                        return (
-                                          <Draggable
-                                            key={uniqueId}
-                                            draggableId={uniqueId}
-                                            index={index}
-                                          >
-                                            {(provided, snapshot) => (
-                                              <HStack
-                                                ref={provided.innerRef}
-                                                {...provided.draggableProps}
-                                                {...provided.dragHandleProps}
-                                                p={2}
-                                                bg={snapshot.isDragging ? "blue.100" : "gray.50"}
-                                                borderRadius="md"
-                                                spacing={3}
-                                                boxShadow={snapshot.isDragging ? "lg" : "sm"}
-                                                transition="all 0.2s"
-                                                _hover={{ bg: "gray.100" }}
-                                              >
-                                                <Icon as={FaGripVertical} color="gray.400" />
-                                                <Text fontWeight="medium">{stat.label}</Text>
-                                                <Text fontSize="sm" color="gray.600" flex="1" noOfLines={1}>
-                                                  {stat.tooltip}
-                                                </Text>
-                                              </HStack>
-                                            )}
-                                          </Draggable>
-                                        );
-                                      })}
-                                    {provided.placeholder}
-                                  </VStack>
-                                )}
-                              </Droppable>
-                            )}
-                          </AccordionPanel>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </DragDropContext>
-                </VStack>
-              </TabPanel>
-
-              {/* Nuevo Panel de Colores */}
+              {/* Panel de Colores */}
               <TabPanel>
                 <ColorCustomizationPanel tieneSuscripcionAvanzada={tieneSuscripcionAvanzada} />
               </TabPanel>
             </TabPanels>
           </Tabs>
+          
+          {/* Nota informativa sobre reordenar */}
+          <Alert status="info" mt={4} fontSize="sm">
+            <AlertIcon />
+            <Text>
+              <strong>Tip:</strong> Para reordenar las estadísticas, usa el botón "Editar" en el HUD principal 
+              y arrastra las estadísticas a la posición deseada.
+            </Text>
+          </Alert>
         </ModalBody>
 
         <ModalFooter>

@@ -52,7 +52,7 @@ export const PRESET_COLORS = [
   },
   { 
     name: 'Índigo', 
-    value: { light: 'indigo.700', dark: 'indigo.300' }, // CORREGIDO: más contraste
+    value: { light: 'indigo.700', dark: 'indigo.300' },
     bg: { light: 'indigo.50', dark: 'indigo.900' }
   },
   { 
@@ -75,13 +75,51 @@ const DEFAULT_CUSTOM_COLORS = {
   useGlobalColor: false, // Si usar color global para todos los stats personalizados
 };
 
+// Función helper para limpiar y validar datos
+const cleanAndValidateData = (data) => {
+  if (!data || typeof data !== 'object') {
+    return DEFAULT_CUSTOM_COLORS;
+  }
+
+  // Limpiar customStats de duplicados y valores inválidos
+  const cleanCustomStats = Array.isArray(data.customStats) 
+    ? [...new Set(data.customStats.filter(stat => stat && typeof stat === 'string'))]
+    : [];
+
+  // Limpiar colorMapping
+  const cleanColorMapping = {};
+  if (data.colorMapping && typeof data.colorMapping === 'object') {
+    Object.entries(data.colorMapping).forEach(([key, value]) => {
+      if (key && typeof key === 'string' && cleanCustomStats.includes(key)) {
+        cleanColorMapping[key] = value;
+      }
+    });
+  }
+
+  return {
+    customStats: cleanCustomStats,
+    colorMapping: cleanColorMapping,
+    globalCustomColor: data.globalCustomColor || null,
+    useGlobalColor: Boolean(data.useGlobalColor),
+  };
+};
+
 export const useCustomColors = () => {
   const colorMode = useColorModeValue('light', 'dark');
   
   // Estado para configuración de colores personalizados
   const [customColors, setCustomColors] = useState(() => {
-    const saved = localStorage.getItem('customColors');
-    return saved ? JSON.parse(saved) : DEFAULT_CUSTOM_COLORS;
+    try {
+      const saved = localStorage.getItem('customColors');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return cleanAndValidateData(parsed);
+      }
+    } catch (error) {
+      console.error('Error loading custom colors:', error);
+      localStorage.removeItem('customColors');
+    }
+    return DEFAULT_CUSTOM_COLORS;
   });
 
   // Estado para forzar re-render cuando cambia la configuración
@@ -89,19 +127,26 @@ export const useCustomColors = () => {
 
   // Guardar configuración en localStorage cuando cambie
   useEffect(() => {
-    localStorage.setItem('customColors', JSON.stringify(customColors));
-    // Forzar re-render de todos los componentes que usan este hook
-    setUpdateTrigger(prev => prev + 1);
+    try {
+      // Limpiar datos antes de guardar
+      const cleanData = cleanAndValidateData(customColors);
+      localStorage.setItem('customColors', JSON.stringify(cleanData));
+      // Forzar re-render de todos los componentes que usan este hook
+      setUpdateTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error saving custom colors:', error);
+    }
   }, [customColors]);
 
   // Verificar si una estadística tiene color personalizado
   const hasCustomColor = useCallback((statId) => {
+    if (!statId || typeof statId !== 'string') return false;
     return customColors.customStats.includes(statId);
   }, [customColors.customStats, updateTrigger]);
 
   // Obtener el color personalizado de una estadística con contraste correcto
   const getCustomColor = useCallback((statId) => {
-    if (!hasCustomColor(statId)) return null;
+    if (!statId || typeof statId !== 'string' || !hasCustomColor(statId)) return null;
     
     // Si usa color global, retornarlo
     if (customColors.useGlobalColor && customColors.globalCustomColor) {
@@ -136,6 +181,8 @@ export const useCustomColors = () => {
 
   // Agregar/quitar estadística de la lista de personalizados
   const toggleCustomStat = useCallback((statId) => {
+    if (!statId || typeof statId !== 'string') return;
+    
     setCustomColors(prev => {
       const newCustomStats = [...prev.customStats];
       const index = newCustomStats.indexOf(statId);
@@ -152,8 +199,10 @@ export const useCustomColors = () => {
           colorMapping: newColorMapping
         };
       } else {
-        // Agregar a personalizados
-        newCustomStats.push(statId);
+        // Agregar a personalizados (prevenir duplicados)
+        if (!newCustomStats.includes(statId)) {
+          newCustomStats.push(statId);
+        }
         return {
           ...prev,
           customStats: newCustomStats
@@ -164,6 +213,8 @@ export const useCustomColors = () => {
 
   // Establecer color para una estadística específica
   const setStatColor = useCallback((statId, colorName) => {
+    if (!statId || typeof statId !== 'string') return;
+    
     const colorConfig = PRESET_COLORS.find(c => c.name === colorName);
     if (!colorConfig) return;
     
@@ -209,7 +260,9 @@ export const useCustomColors = () => {
     setCustomColors(prev => {
       const newColorMapping = { ...prev.colorMapping };
       prev.customStats.forEach(statId => {
-        newColorMapping[statId] = colorValue;
+        if (statId && typeof statId === 'string') {
+          newColorMapping[statId] = colorValue;
+        }
       });
       
       return {
@@ -222,25 +275,30 @@ export const useCustomColors = () => {
   // Limpiar todas las personalizaciones
   const clearAllCustomizations = useCallback(() => {
     setCustomColors(DEFAULT_CUSTOM_COLORS);
+    localStorage.removeItem('customColors');
   }, []);
 
   // Resetear configuración
   const resetConfig = useCallback(() => {
     setCustomColors(DEFAULT_CUSTOM_COLORS);
+    localStorage.removeItem('customColors');
   }, []);
 
   // Exportar configuración
   const exportConfig = useCallback(() => {
-    return JSON.stringify(customColors, null, 2);
+    const cleanData = cleanAndValidateData(customColors);
+    return JSON.stringify(cleanData, null, 2);
   }, [customColors]);
 
   // Importar configuración
   const importConfig = useCallback((configJson) => {
     try {
       const config = JSON.parse(configJson);
-      setCustomColors(config);
+      const cleanConfig = cleanAndValidateData(config);
+      setCustomColors(cleanConfig);
       return { success: true };
     } catch (error) {
+      console.error('Error importing config:', error);
       return { success: false, error: 'Configuración inválida' };
     }
   }, []);

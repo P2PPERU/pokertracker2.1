@@ -30,6 +30,7 @@ import {
   useDisclosure,
   Textarea,
   Collapse,
+  useToast,
 } from '@chakra-ui/react';
 import {
   FaPalette,
@@ -54,6 +55,7 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const sectionBg = useColorModeValue('gray.50', 'gray.700');
+  const toast = useToast();
 
   const {
     hasCustomColor,
@@ -80,28 +82,103 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
 
   // Función para aplicar color seleccionado a un stat
   const applyColorToStat = (statId) => {
+    if (!statId || typeof statId !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'ID de estadística inválido',
+        status: 'error',
+        duration: 2000,
+      });
+      return;
+    }
+    
     if (!hasCustomColor(statId)) {
       toggleCustomStat(statId);
     }
     setStatColor(statId, selectedColorName);
+    
+    toast({
+      title: 'Color aplicado',
+      description: `Color ${selectedColorName} aplicado a la estadística`,
+      status: 'success',
+      duration: 2000,
+    });
   };
 
   // Función para aplicar color a todos los stats seleccionados
   const applyToAllSelected = () => {
+    if (customStats.length === 0) {
+      toast({
+        title: 'Sin estadísticas',
+        description: 'No hay estadísticas seleccionadas',
+        status: 'warning',
+        duration: 2000,
+      });
+      return;
+    }
+    
     applyColorToAllCustom(selectedColorName);
+    toast({
+      title: 'Color aplicado',
+      description: `Color ${selectedColorName} aplicado a todas las estadísticas`,
+      status: 'success',
+      duration: 2000,
+    });
   };
 
   // Función para aplicar color global
   const applyGlobalColor = () => {
     setGlobalColor(selectedColorName);
+    toast({
+      title: 'Color global establecido',
+      description: `${selectedColorName} establecido como color global`,
+      status: 'success',
+      duration: 2000,
+    });
   };
 
   // Manejar importación
   const handleImport = () => {
+    if (!importText.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Por favor pega una configuración válida',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+    
     const result = importConfig(importText);
     if (result.success) {
       setImportText('');
       onImportClose();
+      toast({
+        title: 'Configuración importada',
+        description: 'La configuración se importó correctamente',
+        status: 'success',
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: 'Error al importar',
+        description: result.error || 'Configuración inválida',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  // Limpiar todas las personalizaciones con confirmación
+  const handleClearAll = () => {
+    if (window.confirm('¿Estás seguro de que quieres limpiar todas las personalizaciones?')) {
+      clearAllCustomizations();
+      toast({
+        title: 'Personalizaciones limpiadas',
+        description: 'Todas las personalizaciones han sido eliminadas',
+        status: 'info',
+        duration: 3000,
+      });
     }
   };
 
@@ -153,7 +230,7 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
           <Button leftIcon={<FaUpload />} onClick={onImportOpen}>
             Importar
           </Button>
-          <Button leftIcon={<FaTrash />} colorScheme="red" onClick={clearAllCustomizations}>
+          <Button leftIcon={<FaTrash />} colorScheme="red" onClick={handleClearAll}>
             Limpiar
           </Button>
         </ButtonGroup>
@@ -274,6 +351,8 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
             
             <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={2}>
               {stats.map((stat) => {
+                if (!stat || !stat.id) return null;
+                
                 const isCustom = hasCustomColor(stat.id);
                 const customColor = getCustomColor(stat.id);
                 const isPremium = stat.premium && !tieneSuscripcionAvanzada;
@@ -291,7 +370,7 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
                     <VStack spacing={1}>
                       <Checkbox
                         isChecked={isCustom}
-                        onChange={() => !isPremium && toggleCustomStat(stat.id)}
+                        onChange={() => !isPremium && stat.id && toggleCustomStat(stat.id)}
                         isDisabled={isPremium}
                         colorScheme="purple"
                       >
@@ -300,7 +379,7 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
                         </Text>
                       </Checkbox>
                       
-                      {isCustom && (
+                      {isCustom && stat.id && (
                         <HStack spacing={1}>
                           <Button
                             size="xs"
@@ -362,6 +441,7 @@ const ColorCustomizationPanel = ({ tieneSuscripcionAvanzada }) => {
               rows={10}
               fontSize="sm"
               fontFamily="mono"
+              onClick={(e) => e.target.select()}
             />
           </ModalBody>
           <ModalFooter>

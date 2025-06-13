@@ -104,7 +104,7 @@ const SearchBar = ({
       <HStack spacing={3} mt={3} wrap="wrap">
         <Badge colorScheme="blue" p={2}>
           <Icon as={FaDatabase} mr={1} />
-          Fuente: CSV
+          Fuente: POKERPROTRACK
         </Badge>
         <Badge colorScheme="purple" p={2}>
           <Icon as={FaChartLine} mr={1} />

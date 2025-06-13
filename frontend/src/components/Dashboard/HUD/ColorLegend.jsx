@@ -32,10 +32,12 @@ const ColorLegend = () => {
   } = useCustomColors();
 
   // No mostrar si no hay stats personalizados
-  if (customStats.length === 0) return null;
+  if (!customStats || customStats.length === 0) return null;
 
   // Obtener información de los stats personalizados
   const getStatInfo = (statId) => {
+    if (!statId || typeof statId !== 'string') return null;
+    
     for (const [section, stats] of Object.entries(ALL_STATS)) {
       const stat = stats.find(s => s.id === statId);
       if (stat) {
@@ -47,9 +49,23 @@ const ColorLegend = () => {
 
   // Obtener el nombre del color
   const getColorName = (colorValue) => {
-    const preset = PRESET_COLORS.find(c => c.value === colorValue);
+    if (!colorValue) return 'Sin color';
+    const preset = PRESET_COLORS.find(c => 
+      c.value === colorValue || 
+      c.value.light === colorValue || 
+      c.value.dark === colorValue
+    );
     return preset ? preset.name : 'Personalizado';
   };
+
+  // Filtrar solo stats válidos
+  const validCustomStats = customStats.filter(statId => {
+    const statInfo = getStatInfo(statId);
+    return statInfo !== null;
+  });
+
+  // Si no hay stats válidos, no mostrar nada
+  if (validCustomStats.length === 0) return null;
 
   return (
     <Box 
@@ -72,7 +88,7 @@ const ColorLegend = () => {
         <HStack>
           <Text fontWeight="bold">Colores Personalizados</Text>
           <Badge colorScheme="purple" borderRadius="full">
-            {customStats.length}
+            {validCustomStats.length}
           </Badge>
         </HStack>
       </Button>
@@ -118,16 +134,19 @@ const ColorLegend = () => {
 
           {/* Lista de stats personalizados */}
           <SimpleGrid columns={2} spacing={2}>
-            {customStats.map(statId => {
+            {validCustomStats.map((statId, index) => {
               const statInfo = getStatInfo(statId);
               const customColor = getCustomColor(statId);
               
               if (!statInfo) return null;
               
+              // Usar una key única combinando statId con index para evitar duplicados
+              const uniqueKey = `${statId}-${index}-${Date.now()}`;
+              
               return (
                 <Tooltip
-                  key={statId}
-                  label={`${statInfo.section.toUpperCase()} • ${statInfo.tooltip}`}
+                  key={uniqueKey}
+                  label={`${statInfo.section.toUpperCase()} • ${statInfo.tooltip || 'Sin descripción'}`}
                   fontSize="xs"
                 >
                   <Box
@@ -178,11 +197,11 @@ const ColorLegend = () => {
             </Text>
             <HStack spacing={1} wrap="wrap">
               {PRESET_COLORS.slice(0, 8).map(color => (
-                <Tooltip key={color.value} label={color.name}>
+                <Tooltip key={color.name} label={color.name}>
                   <Box
                     w={3}
                     h={3}
-                    bg={color.value}
+                    bg={color.value.light}
                     borderRadius="sm"
                     border="1px solid"
                     borderColor="gray.300"
