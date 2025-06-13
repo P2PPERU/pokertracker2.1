@@ -27,7 +27,7 @@ const HUDCell = ({ stat, value, label, onClick, isSelected, tooltip, colorRanges
   const numValue = parseFloat(value);
   
   // Determinar el color del valor
-  let valueColor = 'white';
+ let valueColor = useColorModeValue('gray.800', 'white');
   const isCustom = hasCustomColor(stat);
   
   if (isCustom) {
@@ -87,7 +87,7 @@ const HUDCell = ({ stat, value, label, onClick, isSelected, tooltip, colorRanges
         
         <Text 
           fontSize={{ base: "8px", md: "9px" }}
-          color="gray.500" 
+          color={useColorModeValue('gray.700', 'gray.500')}
           fontWeight="bold"
           lineHeight="1"
           mb="2px"

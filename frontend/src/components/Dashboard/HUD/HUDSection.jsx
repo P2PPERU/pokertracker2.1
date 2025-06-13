@@ -11,7 +11,7 @@ import {
 
 const HUDSection = ({ title, children, icon }) => {
   const bgColor = useColorModeValue("gray.700", "gray.800");
-  const textColor = useColorModeValue("gray.100", "gray.100");
+  const textColor = useColorModeValue("white", "gray.100"); 
   
   return (
     <>
