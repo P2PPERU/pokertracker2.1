@@ -1,5 +1,8 @@
 // frontend/src/constants/dashboard/hudConstants.js
 
+// 🆓 ESTADÍSTICAS GRATUITAS PARA USUARIOS BRONCE
+export const FREE_STATS_FOR_BRONZE = ['VPIP', 'PFR', '3Bet'];
+
 // Configuración de colores y rangos para cada estadística
 export const statRanges = {
   VPIP: [
@@ -116,47 +119,47 @@ export const statTooltips = {
 // Configuración de todas las estadísticas disponibles
 export const ALL_STATS = {
   preflop: [
-    { id: 'VPIP', label: 'VPIP', dbField: 'vpip', tooltip: statTooltips.VPIP },
-    { id: 'PFR', label: 'PFR', dbField: 'pfr', tooltip: statTooltips.PFR },
-    { id: '3Bet', label: '3B', dbField: 'three_bet', tooltip: statTooltips['3Bet'] },
-    { id: 'F3B', label: 'F3B', dbField: 'fold_to_3bet_pct', tooltip: statTooltips.F3B },
-    { id: '4Bet', label: '4B', dbField: 'four_bet_preflop_pct', tooltip: statTooltips['4Bet'] },
-    { id: 'F4B', label: 'F4B', dbField: 'fold_to_4bet_pct', tooltip: statTooltips.F4B },
-    { id: 'SQZ', label: 'SQZ', dbField: 'squeeze', tooltip: statTooltips.SQZ },
-    { id: 'LIMP', label: 'LIMP', dbField: 'limp_pct', tooltip: statTooltips.LIMP },
+    { id: 'VPIP', label: 'VPIP', dbField: 'vpip', tooltip: statTooltips.VPIP, free: true },
+    { id: 'PFR', label: 'PFR', dbField: 'pfr', tooltip: statTooltips.PFR, free: true },
+    { id: '3Bet', label: '3B', dbField: 'three_bet', tooltip: statTooltips['3Bet'], free: true },
+    { id: 'F3B', label: 'F3B', dbField: 'fold_to_3bet_pct', tooltip: statTooltips.F3B, premium: true },
+    { id: '4Bet', label: '4B', dbField: 'four_bet_preflop_pct', tooltip: statTooltips['4Bet'], premium: true },
+    { id: 'F4B', label: 'F4B', dbField: 'fold_to_4bet_pct', tooltip: statTooltips.F4B, premium: true },
+    { id: 'SQZ', label: 'SQZ', dbField: 'squeeze', tooltip: statTooltips.SQZ, premium: true },
+    { id: 'LIMP', label: 'LIMP', dbField: 'limp_pct', tooltip: statTooltips.LIMP, premium: true },
     { id: 'LF', label: 'L/F', dbField: 'limp_fold_pct', tooltip: statTooltips.LF, premium: true },
     { id: 'LR', label: 'L/R', dbField: 'limp_raise_pct', tooltip: statTooltips.LR, premium: true },
   ],
   postflop: [
-    { id: 'AF', label: 'AF', dbField: 'aggression_factor', tooltip: statTooltips.AF },
-    { id: 'WWSF', label: 'WWSF', dbField: 'wwsf', tooltip: statTooltips.WWSF },
-    { id: 'WTSD', label: 'WTSD', dbField: 'wtsd', tooltip: statTooltips.WTSD },
-    { id: 'WSD', label: 'WSD', dbField: 'wsd', tooltip: statTooltips.WSD },
-    { id: 'AIBB', label: 'AIBB', dbField: 'all_in_adj_bb_100', tooltip: statTooltips['AI BB'] },
+    { id: 'AF', label: 'AF', dbField: 'aggression_factor', tooltip: statTooltips.AF, premium: true },
+    { id: 'WWSF', label: 'WWSF', dbField: 'wwsf', tooltip: statTooltips.WWSF, premium: true },
+    { id: 'WTSD', label: 'WTSD', dbField: 'wtsd', tooltip: statTooltips.WTSD, premium: true },
+    { id: 'WSD', label: 'WSD', dbField: 'wsd', tooltip: statTooltips.WSD, premium: true },
+    { id: 'AIBB', label: 'AIBB', dbField: 'all_in_adj_bb_100', tooltip: statTooltips['AI BB'], premium: true },
   ],
   flop: [
-    { id: 'CB', label: 'CB', dbField: 'cbet_flop', tooltip: statTooltips.CBet },
-    { id: 'FCB', label: 'FCB', dbField: 'fold_to_flop_cbet_pct', tooltip: statTooltips.FCBET },
-    { id: 'CBIP', label: 'CB-IP', dbField: 'cbet_flop_ip', tooltip: statTooltips['CBet IP'] },
-    { id: 'CBOOP', label: 'CB-OOP', dbField: 'cbet_flop_oop', tooltip: statTooltips['CBet OOP'] },
-    { id: 'XRF', label: 'X/R', dbField: 'check_raise_flop', tooltip: statTooltips.XRF },
-    { id: 'DONK', label: 'DONK', dbField: 'donk_flop', tooltip: statTooltips.DONK },
+    { id: 'CB', label: 'CB', dbField: 'cbet_flop', tooltip: statTooltips.CBet, premium: true },
+    { id: 'FCB', label: 'FCB', dbField: 'fold_to_flop_cbet_pct', tooltip: statTooltips.FCBET, premium: true },
+    { id: 'CBIP', label: 'CB-IP', dbField: 'cbet_flop_ip', tooltip: statTooltips['CBet IP'], premium: true },
+    { id: 'CBOOP', label: 'CB-OOP', dbField: 'cbet_flop_oop', tooltip: statTooltips['CBet OOP'], premium: true },
+    { id: 'XRF', label: 'X/R', dbField: 'check_raise_flop', tooltip: statTooltips.XRF, premium: true },
+    { id: 'DONK', label: 'DONK', dbField: 'donk_flop', tooltip: statTooltips.DONK, premium: true },
     { id: 'FLOAT', label: 'FLOAT', dbField: 'float_flop', tooltip: statTooltips.FLOAT, premium: true },
   ],
   turn: [
-    { id: 'CBT', label: 'CB-T', dbField: 'cbet_turn', tooltip: statTooltips.CBetT },
-    { id: 'FCBT', label: 'FCB-T', dbField: 'fold_to_turn_cbet_pct', tooltip: statTooltips.FCBetT },
-    { id: 'PROBE', label: 'PROBE', dbField: 'probe_bet_turn_pct', tooltip: statTooltips.PROBE },
-    { id: 'OBT', label: 'OB-T', dbField: 'overbet_turn_pct', tooltip: statTooltips.OBT },
+    { id: 'CBT', label: 'CB-T', dbField: 'cbet_turn', tooltip: statTooltips.CBetT, premium: true },
+    { id: 'FCBT', label: 'FCB-T', dbField: 'fold_to_turn_cbet_pct', tooltip: statTooltips.FCBetT, premium: true },
+    { id: 'PROBE', label: 'PROBE', dbField: 'probe_bet_turn_pct', tooltip: statTooltips.PROBE, premium: true },
+    { id: 'OBT', label: 'OB-T', dbField: 'overbet_turn_pct', tooltip: statTooltips.OBT, premium: true },
     { id: 'FOBT', label: 'FOB-T', dbField: 'fold_to_turn_overbet', tooltip: statTooltips.FOBT, premium: true },
     { id: 'XRT', label: 'X/R-T', dbField: 'check_raise_turn', tooltip: statTooltips.XRT, premium: true },
     { id: 'STEAL', label: 'STEAL', dbField: 'steal_turn', tooltip: statTooltips.STEAL, premium: true },
   ],
   river: [
-    { id: 'CBR', label: 'CB-R', dbField: 'cbet_river', tooltip: statTooltips.CBetR },
-    { id: 'BETR', label: 'BET-R', dbField: 'bet_river_pct', tooltip: statTooltips.BetR },
-    { id: 'FBR', label: 'FB-R', dbField: 'fold_to_river_bet_pct', tooltip: statTooltips.FBetR },
-    { id: 'OBR', label: 'OB-R', dbField: 'overbet_river_pct', tooltip: statTooltips.OBR },
+    { id: 'CBR', label: 'CB-R', dbField: 'cbet_river', tooltip: statTooltips.CBetR, premium: true },
+    { id: 'BETR', label: 'BET-R', dbField: 'bet_river_pct', tooltip: statTooltips.BetR, premium: true },
+    { id: 'FBR', label: 'FB-R', dbField: 'fold_to_river_bet_pct', tooltip: statTooltips.FBetR, premium: true },
+    { id: 'OBR', label: 'OB-R', dbField: 'overbet_river_pct', tooltip: statTooltips.OBR, premium: true },
     { id: 'FOBR', label: 'FOB-R', dbField: 'fold_to_river_overbet', tooltip: statTooltips.FOBR, premium: true },
     { id: 'BF', label: 'B&F', dbField: 'bet_river_fold', tooltip: statTooltips['B&F'], premium: true },
     { id: 'BRS', label: 'BR-S', dbField: 'bet_river_small_pot', tooltip: statTooltips.BRS, premium: true },
@@ -181,7 +184,7 @@ export const DEFAULT_HUD_CONFIG = {
     river: ['CBR', 'BETR', 'FBR', 'OBR'],
     showdown: []
   },
-  autoCopyStats: ['VPIP', 'PFR', '3Bet', 'WTSD', 'WSD'],
+  autoCopyStats: ['VPIP', 'PFR', '3Bet'],
   statOrder: {
     preflop: ['VPIP', 'PFR', '3Bet', 'F3B', '4Bet', 'F4B', 'SQZ', 'LIMP', 'LF', 'LR'],
     postflop: ['AF', 'WWSF', 'WTSD', 'WSD', 'AIBB'],

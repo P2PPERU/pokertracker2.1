@@ -26,10 +26,13 @@ import {
   Badge,
   Icon,
   useToast,
+  Link,
+  Divider,
 } from '@chakra-ui/react';
-import { FaCog, FaCopy, FaPalette } from 'react-icons/fa';
-import { ALL_STATS, DEFAULT_HUD_CONFIG } from '../../../constants/dashboard/hudConstants';
+import { FaCog, FaCopy, FaPalette, FaCrown, FaLock } from 'react-icons/fa';
+import { ALL_STATS, DEFAULT_HUD_CONFIG, FREE_STATS_FOR_BRONZE } from '../../../constants/dashboard/hudConstants';
 import ColorCustomizationPanel from './ColorCustomizationPanel';
+import { Link as RouterLink } from 'react-router-dom';
 
 // Función para validar y limpiar la configuración
 const cleanAndValidateConfig = (config) => {
@@ -99,6 +102,21 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
       return;
     }
     
+    // Verificar si es una stat gratuita o si el usuario tiene suscripción
+    const stat = ALL_STATS[section].find(s => s.id === statId);
+    const isFree = FREE_STATS_FOR_BRONZE.includes(statId);
+    
+    if (!tieneSuscripcionAvanzada && stat?.premium && !isFree) {
+      toast({
+        title: 'Estadística Premium',
+        description: 'Actualiza a VIP Plata u Oro para acceder a esta estadística',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
     setLocalConfig(prev => {
       const newConfig = { ...prev };
       const visibleStats = [...(newConfig.visibleStats[section] || [])];
@@ -118,6 +136,23 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
   const handleAutoCopyToggle = (statId) => {
     if (!statId || typeof statId !== 'string') {
       console.error('Invalid statId:', statId);
+      return;
+    }
+    
+    // Verificar si es una stat gratuita o si el usuario tiene suscripción
+    const isFree = FREE_STATS_FOR_BRONZE.includes(statId);
+    const isPremium = Object.values(ALL_STATS).some(section => 
+      section.some(s => s.id === statId && s.premium)
+    );
+    
+    if (!tieneSuscripcionAvanzada && isPremium && !isFree) {
+      toast({
+        title: 'Función Premium',
+        description: 'Actualiza a VIP para auto-copiar estadísticas premium',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
     
@@ -188,6 +223,26 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
         <ModalCloseButton />
         
         <ModalBody overflowY="auto">
+          {/* Alerta para usuarios bronce */}
+          {!tieneSuscripcionAvanzada && (
+            <Alert status="warning" mb={4}>
+              <AlertIcon />
+              <Box>
+                <Text fontWeight="bold">
+                  <Icon as={FaCrown} mr={1} />
+                  Plan Bronce - Acceso Limitado
+                </Text>
+                <Text fontSize="sm">
+                  Solo puedes ver VPIP, PFR y 3BET. Las demás estadísticas requieren suscripción VIP.
+                  {' '}
+                  <Link as={RouterLink} to="/suscripciones" color="orange.600" fontWeight="bold">
+                    Actualizar ahora
+                  </Link>
+                </Text>
+              </Box>
+            </Alert>
+          )}
+          
           <Tabs>
             <TabList>
               <Tab>Visibilidad</Tab>
@@ -196,6 +251,7 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                 <HStack>
                   <Icon as={FaPalette} />
                   <Text>Colores</Text>
+                  {!tieneSuscripcionAvanzada && <Icon as={FaLock} color="orange.400" />}
                 </HStack>
               </Tab>
             </TabList>
@@ -219,25 +275,51 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                           if (!stat || !stat.id) return null;
                           
                           const isVisible = (localConfig.visibleStats[section] || []).includes(stat.id);
-                          const isPremium = stat.premium && !tieneSuscripcionAvanzada;
+                          const isFree = FREE_STATS_FOR_BRONZE.includes(stat.id);
+                          const isPremium = stat.premium && !tieneSuscripcionAvanzada && !isFree;
                           
                           return (
-                            <Checkbox
+                            <Box
                               key={stat.id}
-                              isChecked={isVisible}
-                              onChange={() => !isPremium && stat.id && handleStatVisibilityToggle(section, stat.id)}
-                              isDisabled={isPremium}
+                              opacity={isPremium ? 0.6 : 1}
+                              position="relative"
                             >
-                              <HStack spacing={1}>
-                                <Text fontSize="sm">{stat.label}</Text>
-                                {isPremium && (
-                                  <Badge colorScheme="purple" fontSize="xs">PRO</Badge>
-                                )}
-                              </HStack>
-                            </Checkbox>
+                              <Checkbox
+                                isChecked={isVisible}
+                                onChange={() => handleStatVisibilityToggle(section, stat.id)}
+                                isDisabled={isPremium}
+                              >
+                                <HStack spacing={1}>
+                                  <Text fontSize="sm">{stat.label}</Text>
+                                  {isPremium && (
+                                    <Badge colorScheme="orange" fontSize="xs">
+                                      <Icon as={FaLock} mr={1} />
+                                      VIP
+                                    </Badge>
+                                  )}
+                                  {isFree && !tieneSuscripcionAvanzada && (
+                                    <Badge colorScheme="green" fontSize="xs">
+                                      FREE
+                                    </Badge>
+                                  )}
+                                </HStack>
+                              </Checkbox>
+                              {isPremium && (
+                                <Box
+                                  position="absolute"
+                                  top="0"
+                                  left="0"
+                                  right="0"
+                                  bottom="0"
+                                  pointerEvents="none"
+                                  filter="blur(1px)"
+                                />
+                              )}
+                            </Box>
                           );
                         })}
                       </SimpleGrid>
+                      <Divider mt={3} />
                     </Box>
                   ))}
                 </VStack>
@@ -261,26 +343,52 @@ const HUDConfigModal = ({ isOpen, onClose, hudConfig, setHudConfig, tieneSuscrip
                           if (!stat || !stat.id) return null;
                           
                           const isAutoCopy = (localConfig.autoCopyStats || []).includes(stat.id);
-                          const isPremium = stat.premium && !tieneSuscripcionAvanzada;
+                          const isFree = FREE_STATS_FOR_BRONZE.includes(stat.id);
+                          const isPremium = stat.premium && !tieneSuscripcionAvanzada && !isFree;
                           
                           return (
-                            <Checkbox
+                            <Box
                               key={stat.id}
-                              isChecked={isAutoCopy}
-                              onChange={() => !isPremium && stat.id && handleAutoCopyToggle(stat.id)}
-                              isDisabled={isPremium}
+                              opacity={isPremium ? 0.6 : 1}
+                              position="relative"
                             >
-                              <HStack spacing={1}>
-                                <Icon as={FaCopy} boxSize={3} />
-                                <Text fontSize="sm">{stat.label}</Text>
-                                {isPremium && (
-                                  <Badge colorScheme="purple" fontSize="xs">PRO</Badge>
-                                )}
-                              </HStack>
-                            </Checkbox>
+                              <Checkbox
+                                isChecked={isAutoCopy}
+                                onChange={() => handleAutoCopyToggle(stat.id)}
+                                isDisabled={isPremium}
+                              >
+                                <HStack spacing={1}>
+                                  <Icon as={FaCopy} boxSize={3} />
+                                  <Text fontSize="sm">{stat.label}</Text>
+                                  {isPremium && (
+                                    <Badge colorScheme="orange" fontSize="xs">
+                                      <Icon as={FaLock} mr={1} />
+                                      VIP
+                                    </Badge>
+                                  )}
+                                  {isFree && !tieneSuscripcionAvanzada && (
+                                    <Badge colorScheme="green" fontSize="xs">
+                                      FREE
+                                    </Badge>
+                                  )}
+                                </HStack>
+                              </Checkbox>
+                              {isPremium && (
+                                <Box
+                                  position="absolute"
+                                  top="0"
+                                  left="0"
+                                  right="0"
+                                  bottom="0"
+                                  pointerEvents="none"
+                                  filter="blur(1px)"
+                                />
+                              )}
+                            </Box>
                           );
                         })}
                       </SimpleGrid>
+                      <Divider mt={3} />
                     </Box>
                   ))}
                 </VStack>

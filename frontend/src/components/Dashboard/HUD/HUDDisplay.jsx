@@ -13,6 +13,10 @@ import {
   useColorModeValue,
   Tooltip,
   Button,
+  Alert,
+  AlertIcon,
+  AlertDescription,
+  Link,
 } from '@chakra-ui/react';
 import {
   FaChartLine,
@@ -26,12 +30,14 @@ import {
   FaGripVertical,
   FaLock,
   FaUnlock,
+  FaCrown,
 } from "react-icons/fa";
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import HUDCell from './HUDCell';
 import HUDSection from './HUDSection';
 import { formatStatValue, getStakeColor, getStakeLabel } from '../../../utils/dashboard/statsHelpers';
-import { statRanges } from '../../../constants/dashboard/hudConstants';
+import { statRanges, FREE_STATS_FOR_BRONZE } from '../../../constants/dashboard/hudConstants';
+import { Link as RouterLink } from 'react-router-dom';
 
 const HUDDisplay = ({
   jugador,
@@ -40,7 +46,8 @@ const HUDDisplay = ({
   toggleStatSelection,
   selectedStats,
   onConfigOpen,
-  updateStatOrder, // Nueva prop del componente padre
+  updateStatOrder,
+  tieneSuscripcionAvanzada,
 }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const hudBg = useColorModeValue("gray.100", "gray.900");
@@ -68,7 +75,7 @@ const HUDDisplay = ({
     if (sourceDroppableId !== destinationDroppableId) return;
 
     const section = sourceDroppableId.replace('hud-', '');
-    const visibleStats = getVisibleOrderedStats(section);
+    const visibleStats = getVisibleOrderedStats(section, tieneSuscripcionAvanzada);
     
     // Reordenar
     const newOrder = Array.from(visibleStats.map(s => s.id));
@@ -79,7 +86,13 @@ const HUDDisplay = ({
     if (updateStatOrder) {
       updateStatOrder(section, newOrder);
     }
-  }, [editMode, getVisibleOrderedStats, updateStatOrder]);
+  }, [editMode, getVisibleOrderedStats, updateStatOrder, tieneSuscripcionAvanzada]);
+
+  // Contar estadísticas bloqueadas
+  const blockedStatsCount = Object.entries(sections).reduce((count, [section]) => {
+    const stats = getVisibleOrderedStats(section, tieneSuscripcionAvanzada);
+    return count + stats.filter(stat => stat.isBlocked).length;
+  }, 0);
 
   return (
     <Box 
@@ -128,6 +141,40 @@ const HUDDisplay = ({
         </HStack>
       </HStack>
 
+      {/* Alerta para usuarios bronce - más integrada con el tema */}
+      {!tieneSuscripcionAvanzada && blockedStatsCount > 0 && (
+        <Alert 
+          status="warning" 
+          mb={3}
+          bg="orange.900"
+          borderRadius="md"
+          fontSize="sm"
+          border="1px solid"
+          borderColor="orange.700"
+          color="orange.100"
+        >
+          <AlertIcon color="orange.400" />
+          <AlertDescription>
+            <HStack spacing={2}>
+              <Icon as={FaCrown} color="orange.400" />
+              <Text>
+                <strong>{blockedStatsCount} estadísticas bloqueadas.</strong> 
+                {' '}Solo puedes ver VPIP, PFR y 3BET con tu plan actual.
+              </Text>
+              <Link 
+                as={RouterLink} 
+                to="/suscripciones" 
+                color="orange.300" 
+                fontWeight="bold"
+                _hover={{ color: "orange.200" }}
+              >
+                Actualizar a VIP
+              </Link>
+            </HStack>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* TABLA HUD PROFESIONAL con drag & drop */}
       <Box 
         overflowX="auto" 
@@ -145,7 +192,7 @@ const HUDDisplay = ({
           >
             {/* Renderizar secciones basadas en la configuración */}
             {Object.entries(sections).map(([section, { title, icon }]) => {
-              const visibleStats = getVisibleOrderedStats(section);
+              const visibleStats = getVisibleOrderedStats(section, tieneSuscripcionAvanzada);
               if (visibleStats.length === 0) return null;
               
               return (
@@ -208,10 +255,12 @@ const HUDDisplay = ({
                                       stat={stat.id}
                                       label={stat.label}
                                       value={displayValue}
-                                      onClick={!editMode ? toggleStatSelection : undefined}
+                                      onClick={!editMode && !stat.isBlocked ? toggleStatSelection : undefined}
                                       isSelected={selectedStats[stat.id] !== undefined}
                                       colorRanges={statRanges[stat.id]}
                                       tooltip={stat.tooltip}
+                                      isBlocked={stat.isBlocked}
+                                      tieneSuscripcionAvanzada={tieneSuscripcionAvanzada}
                                     />
                                   </Box>
                                 )}
@@ -235,10 +284,12 @@ const HUDDisplay = ({
                             stat={stat.id}
                             label={stat.label}
                             value={displayValue}
-                            onClick={toggleStatSelection}
+                            onClick={!stat.isBlocked ? toggleStatSelection : undefined}
                             isSelected={selectedStats[stat.id] !== undefined}
                             colorRanges={statRanges[stat.id]}
                             tooltip={stat.tooltip}
+                            isBlocked={stat.isBlocked}
+                            tieneSuscripcionAvanzada={tieneSuscripcionAvanzada}
                           />
                         );
                       })}

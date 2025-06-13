@@ -192,13 +192,12 @@ const Dashboard = () => {
                 <HUDDisplay
                   jugador={jugador}
                   stakeSeleccionado={stakeSeleccionado}
-                  getVisibleOrderedStats={(section) => 
-                    getVisibleOrderedStats(section, tieneSuscripcionAvanzada)
-                  }
+                  getVisibleOrderedStats={getVisibleOrderedStats}
                   toggleStatSelection={toggleStatSelection}
                   selectedStats={selectedStats}
                   onConfigOpen={onConfigOpen}
                   updateStatOrder={updateStatOrder}
+                  tieneSuscripcionAvanzada={tieneSuscripcionAvanzada}
                 />
                 
                 {/* Botón de copiar y leyenda */}

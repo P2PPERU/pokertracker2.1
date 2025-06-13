@@ -1,7 +1,7 @@
 // frontend/src/hooks/dashboard/useHUDConfig.js
 
 import { useState, useCallback, useEffect } from 'react';
-import { DEFAULT_HUD_CONFIG, ALL_STATS } from '../../constants/dashboard/hudConstants';
+import { DEFAULT_HUD_CONFIG, ALL_STATS, FREE_STATS_FOR_BRONZE } from '../../constants/dashboard/hudConstants';
 
 export const useHUDConfig = () => {
   // Estado para configuración del HUD
@@ -84,7 +84,7 @@ export const useHUDConfig = () => {
     setHudConfig(DEFAULT_HUD_CONFIG);
   }, []);
 
-  // Obtener stats visibles y ordenadas
+  // Obtener stats visibles y ordenadas - MODIFICADO para incluir stats bloqueadas
   const getVisibleOrderedStats = useCallback((section, tieneSuscripcionAvanzada) => {
     const visibleIds = hudConfig.visibleStats[section] || [];
     const orderedIds = hudConfig.statOrder[section] || [];
@@ -96,14 +96,19 @@ export const useHUDConfig = () => {
       statsMap[stat.id] = stat;
     });
     
-    // Primero incluir las stats en el orden especificado
+    // Para usuarios bronce, incluir TODAS las stats visibles pero marcar las bloqueadas
     const orderedStats = [];
+    
+    // Primero incluir las stats en el orden especificado
     orderedIds.forEach(id => {
       if (visibleIds.includes(id) && statsMap[id]) {
         const stat = statsMap[id];
-        if (!stat.premium || tieneSuscripcionAvanzada) {
-          orderedStats.push(stat);
-        }
+        // Incluir la stat independientemente de si es premium
+        // Agregar propiedad isBlocked para usuarios bronce
+        orderedStats.push({
+          ...stat,
+          isBlocked: !tieneSuscripcionAvanzada && stat.premium && !FREE_STATS_FOR_BRONZE.includes(stat.id)
+        });
       }
     });
     
@@ -111,14 +116,20 @@ export const useHUDConfig = () => {
     visibleIds.forEach(id => {
       if (!orderedIds.includes(id) && statsMap[id]) {
         const stat = statsMap[id];
-        if (!stat.premium || tieneSuscripcionAvanzada) {
-          orderedStats.push(stat);
-        }
+        orderedStats.push({
+          ...stat,
+          isBlocked: !tieneSuscripcionAvanzada && stat.premium && !FREE_STATS_FOR_BRONZE.includes(stat.id)
+        });
       }
     });
     
     return orderedStats;
   }, [hudConfig]);
+
+  // Verificar si una stat es gratuita
+  const isStatFree = useCallback((statId) => {
+    return FREE_STATS_FOR_BRONZE.includes(statId);
+  }, []);
 
   return {
     hudConfig,
@@ -128,5 +139,6 @@ export const useHUDConfig = () => {
     updateStatOrder,
     resetConfig,
     getVisibleOrderedStats,
+    isStatFree,
   };
 };
