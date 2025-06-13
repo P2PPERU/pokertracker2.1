@@ -25,6 +25,9 @@ import {
   useToast,
   Flex,
   Divider,
+  Select,
+  IconButton,
+  ButtonGroup,
 } from '@chakra-ui/react';
 import {
   FaDatabase,
@@ -35,6 +38,10 @@ import {
   FaSyncAlt,
   FaFileAlt,
   FaLayerGroup,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -43,6 +50,11 @@ const CSVDashboard = ({ refreshTrigger }) => {
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' o 'desc'
 
   // Colores
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -84,6 +96,33 @@ const CSVDashboard = ({ refreshTrigger }) => {
   useEffect(() => {
     fetchCSVDashboard();
   }, [refreshTrigger]);
+
+  // Ordenar archivos por fecha
+  const sortedArchivos = [...archivos].sort((a, b) => {
+    const dateA = new Date(a.fecha_snapshot);
+    const dateB = new Date(b.fecha_snapshot);
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
+  // Cálculos de paginación
+  const totalPages = Math.ceil(sortedArchivos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentArchivos = sortedArchivos.slice(startIndex, endIndex);
+
+  // Funciones de paginación
+  const goToPage = (page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const handleItemsPerPageChange = (e) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Resetear a primera página
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+  };
 
   const formatearFecha = (fecha) => {
     if (!fecha) return 'N/A';
@@ -167,24 +206,6 @@ const CSVDashboard = ({ refreshTrigger }) => {
       </Alert>
     );
   }
-
-  // Agrupar archivos por fecha y stake
-  const archivosAgrupados = archivos.reduce((acc, archivo) => {
-    const key = `${archivo.fecha_snapshot}-${archivo.stake_category}`;
-    if (!acc[key]) {
-      acc[key] = {
-        fecha_snapshot: archivo.fecha_snapshot,
-        stake_category: archivo.stake_category,
-        archivos: [],
-        total_jugadores: 0,
-        salas: new Set()
-      };
-    }
-    acc[key].archivos.push(archivo);
-    acc[key].total_jugadores += parseInt(archivo.total_jugadores || 0);
-    acc[key].salas.add(archivo.sala);
-    return acc;
-  }, {});
 
   return (
     <VStack spacing={6} align="stretch">
@@ -288,11 +309,42 @@ const CSVDashboard = ({ refreshTrigger }) => {
 
       <Divider />
 
-      {/* Tabla de archivos cargados */}
+      {/* Tabla de archivos cargados con controles de paginación */}
       <Box>
-        <Text fontSize="md" fontWeight="bold" mb={4}>
-          📁 Archivos CSV Cargados
-        </Text>
+        <Flex justify="space-between" align="center" mb={4}>
+          <Text fontSize="md" fontWeight="bold">
+            📁 Archivos CSV Cargados
+          </Text>
+          
+          {/* Controles de paginación superiores */}
+          <HStack spacing={4}>
+            <HStack spacing={2}>
+              <Text fontSize="sm">Mostrar:</Text>
+              <Select
+                size="sm"
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+                w="70px"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </Select>
+              <Text fontSize="sm">por página</Text>
+            </HStack>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={toggleSortOrder}
+              leftIcon={sortOrder === 'desc' ? <FaAngleDoubleLeft /> : <FaAngleDoubleRight />}
+            >
+              {sortOrder === 'desc' ? 'Más recientes' : 'Más antiguos'}
+            </Button>
+          </HStack>
+        </Flex>
         
         {archivos.length === 0 ? (
           <Box
@@ -312,104 +364,173 @@ const CSVDashboard = ({ refreshTrigger }) => {
             </Text>
           </Box>
         ) : (
-          <Box
-            bg={cardBg}
-            borderRadius="lg"
-            border="1px solid"
-            borderColor={borderColor}
-            overflow="hidden"
-          >
-            <Table variant="simple" size="md">
-              <Thead bg={headerBg}>
-                <Tr>
-                  <Th>Fecha Snapshot</Th>
-                  <Th>Período</Th>
-                  <Th>Sala</Th>
-                  <Th>
-                    <HStack>
-                      <Icon as={FaLayerGroup} />
-                      <Text>Stake</Text>
-                    </HStack>
-                  </Th>
-                  <Th>Jugadores</Th>
-                  <Th>Último Procesamiento</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {archivos.map((archivo, index) => (
-                  <Tr key={index} _hover={{ bg: hoverBg }}>
-                    <Td>
+          <>
+            {/* Información de paginación */}
+            <Box mb={3} textAlign="center">
+              <Text fontSize="sm" color="gray.600">
+                Mostrando {startIndex + 1} - {Math.min(endIndex, sortedArchivos.length)} de {sortedArchivos.length} archivos
+              </Text>
+            </Box>
+            
+            <Box
+              bg={cardBg}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor={borderColor}
+              overflow="hidden"
+            >
+              <Table variant="simple" size="md">
+                <Thead bg={headerBg}>
+                  <Tr>
+                    <Th>Fecha Snapshot</Th>
+                    <Th>Período</Th>
+                    <Th>Sala</Th>
+                    <Th>
                       <HStack>
-                        <Icon as={FaCalendarAlt} color="blue.500" />
-                        <Text fontWeight="medium">
-                          {formatearFecha(archivo.fecha_snapshot)}
-                        </Text>
+                        <Icon as={FaLayerGroup} />
+                        <Text>Stake</Text>
                       </HStack>
-                    </Td>
-                    
-                    <Td>
-                      <Badge 
-                        colorScheme={getBadgeColor(archivo.tipo_periodo)}
-                        px={2}
-                        py={1}
-                        borderRadius="md"
-                      >
-                        {archivo.tipo_periodo.toUpperCase()}
-                      </Badge>
-                    </Td>
-                    
-                    <Td>
-                      <Badge 
-                        colorScheme={getSalaColor(archivo.sala)}
-                        px={2}
-                        py={1}
-                        borderRadius="md"
-                        variant="outline"
-                      >
-                        {archivo.sala}
-                      </Badge>
-                    </Td>
-                    
-                    <Td>
-                      <Badge 
-                        colorScheme={getStakeColor(archivo.stake_category)}
-                        px={3}
-                        py={1}
-                        borderRadius="md"
-                        fontSize="sm"
-                        fontWeight="bold"
-                      >
-                        {getStakeLabel(archivo.stake_category)}
-                      </Badge>
-                    </Td>
-                    
-                    <Td>
-                      <HStack>
-                        <Icon as={FaUsers} color="green.500" boxSize={4} />
-                        <Text fontWeight="bold">
-                          {parseInt(archivo.total_jugadores).toLocaleString()}
-                        </Text>
-                      </HStack>
-                    </Td>
-                    
-                    <Td>
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" fontWeight="medium">
-                          {formatearFechaCompleta(archivo.ultimo_procesamiento)}
-                        </Text>
+                    </Th>
+                    <Th>Jugadores</Th>
+                    <Th>Último Procesamiento</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {currentArchivos.map((archivo, index) => (
+                    <Tr key={index} _hover={{ bg: hoverBg }}>
+                      <Td>
                         <HStack>
-                          <Icon as={FaClock} color="gray.400" boxSize={3} />
-                          <Text fontSize="xs" color="gray.500">
-                            Procesado
+                          <Icon as={FaCalendarAlt} color="blue.500" />
+                          <Text fontWeight="medium">
+                            {formatearFecha(archivo.fecha_snapshot)}
                           </Text>
                         </HStack>
-                      </VStack>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
+                      </Td>
+                      
+                      <Td>
+                        <Badge 
+                          colorScheme={getBadgeColor(archivo.tipo_periodo)}
+                          px={2}
+                          py={1}
+                          borderRadius="md"
+                        >
+                          {archivo.tipo_periodo.toUpperCase()}
+                        </Badge>
+                      </Td>
+                      
+                      <Td>
+                        <Badge 
+                          colorScheme={getSalaColor(archivo.sala)}
+                          px={2}
+                          py={1}
+                          borderRadius="md"
+                          variant="outline"
+                        >
+                          {archivo.sala}
+                        </Badge>
+                      </Td>
+                      
+                      <Td>
+                        <Badge 
+                          colorScheme={getStakeColor(archivo.stake_category)}
+                          px={3}
+                          py={1}
+                          borderRadius="md"
+                          fontSize="sm"
+                          fontWeight="bold"
+                        >
+                          {getStakeLabel(archivo.stake_category)}
+                        </Badge>
+                      </Td>
+                      
+                      <Td>
+                        <HStack>
+                          <Icon as={FaUsers} color="green.500" boxSize={4} />
+                          <Text fontWeight="bold">
+                            {parseInt(archivo.total_jugadores).toLocaleString()}
+                          </Text>
+                        </HStack>
+                      </Td>
+                      
+                      <Td>
+                        <VStack align="start" spacing={0}>
+                          <Text fontSize="sm" fontWeight="medium">
+                            {formatearFechaCompleta(archivo.ultimo_procesamiento)}
+                          </Text>
+                          <HStack>
+                            <Icon as={FaClock} color="gray.400" boxSize={3} />
+                            <Text fontSize="xs" color="gray.500">
+                              Procesado
+                            </Text>
+                          </HStack>
+                        </VStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+            
+            {/* Controles de paginación inferiores */}
+            <Flex justify="space-between" align="center" mt={4}>
+              <Text fontSize="sm" color="gray.600">
+                Página {currentPage} de {totalPages}
+              </Text>
+              
+              <ButtonGroup size="sm" spacing={2}>
+                <IconButton
+                  icon={<FaAngleDoubleLeft />}
+                  onClick={() => goToPage(1)}
+                  isDisabled={currentPage === 1}
+                  aria-label="Primera página"
+                />
+                <IconButton
+                  icon={<FaChevronLeft />}
+                  onClick={() => goToPage(currentPage - 1)}
+                  isDisabled={currentPage === 1}
+                  aria-label="Página anterior"
+                />
+                
+                {/* Números de página */}
+                {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = idx + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = idx + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + idx;
+                  } else {
+                    pageNum = currentPage - 2 + idx;
+                  }
+                  
+                  return (
+                    <Button
+                      key={idx}
+                      onClick={() => goToPage(pageNum)}
+                      variant={currentPage === pageNum ? 'solid' : 'outline'}
+                      colorScheme={currentPage === pageNum ? 'blue' : 'gray'}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <IconButton
+                  icon={<FaChevronRight />}
+                  onClick={() => goToPage(currentPage + 1)}
+                  isDisabled={currentPage === totalPages}
+                  aria-label="Página siguiente"
+                />
+                <IconButton
+                  icon={<FaAngleDoubleRight />}
+                  onClick={() => goToPage(totalPages)}
+                  isDisabled={currentPage === totalPages}
+                  aria-label="Última página"
+                />
+              </ButtonGroup>
+            </Flex>
+          </>
         )}
       </Box>
 

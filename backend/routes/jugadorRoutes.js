@@ -87,7 +87,7 @@ router.get("/jugador/:sala/:nombre/stakes", verificarToken, async (req, res) => 
 });
 
 // Ranking por stake — protegido (ACTUALIZADO para CSV)
-router.get("/top-jugadores/:stake", verificarToken, getTopJugadoresPorStake);
+router.get("/top-jugadores/:stake", getTopJugadoresPorStake);
 
 // ✨ Ruta de análisis IA COMPLETAMENTE ACTUALIZADA para CSV
 router.get("/jugador/:sala/:nombre/analisis", verificarToken, async (req, res) => {

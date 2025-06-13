@@ -292,7 +292,7 @@ const TopJugadores = () => {
                   <StatLabel>
                     <HStack>
                       <Icon as={FaGamepad} color="purple.500" />
-                      <Text>Manos Totales</Text>
+                      <Text> Player Totales</Text>
                     </HStack>
                   </StatLabel>
                   <StatNumber>{formatNumber(stats.totalHands)}</StatNumber>
@@ -464,7 +464,7 @@ const TopJugadores = () => {
                   {stakeInfo.label} • {stakeInfo.range}
                 </Badge>
                 <Text fontSize="xs" color="gray.500" textAlign="center">
-                  Datos actualizados del sistema CSV • Mostrando top 10 de {stats.totalPlayers} jugadores
+                  Datos actualizados del sistema • Mostrando top 10 de {stats.totalPlayers} jugadores
                 </Text>
               </VStack>
             )}
