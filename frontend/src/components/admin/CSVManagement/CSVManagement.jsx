@@ -18,9 +18,11 @@ import {
   FaUpload,
   FaDatabase,
   FaChartLine,
+  FaChartBar, // NUEVO
 } from 'react-icons/fa';
 import CSVUploader from './CSVUploader';
 import CSVDashboard from './CSVDashboard';
+import GraficosCSVUpload from './GraficosCSVUpload'; // NUEVO
 
 const CSVManagement = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -82,6 +84,12 @@ const CSVManagement = () => {
                 <Text>Dashboard</Text>
               </HStack>
             </Tab>
+            <Tab _selected={{ color: 'white', bg: '#4066ED' }}>
+              <HStack>
+                <Icon as={FaChartBar} />
+                <Text>Gráficos CSV</Text>
+              </HStack>
+            </Tab>
           </TabList>
 
           <TabPanels>
@@ -131,6 +139,47 @@ const CSVManagement = () => {
             {/* Panel del dashboard */}
             <TabPanel p={6}>
               <CSVDashboard refreshTrigger={refreshTrigger} />
+            </TabPanel>
+
+            {/* Panel de gráficos CSV - NUEVO */}
+            <TabPanel p={6}>
+              <VStack spacing={6} align="stretch">
+                {/* Información del sistema de gráficos */}
+                <Box
+                  bg={useColorModeValue("blue.50", "blue.900")}
+                  p={4}
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor={useColorModeValue("blue.200", "blue.700")}
+                >
+                  <HStack mb={3}>
+                    <Icon as={FaChartBar} color="blue.600" />
+                    <Text fontWeight="bold">📈 Sistema de Gráficos Pre-calculados</Text>
+                  </HStack>
+                  
+                  <VStack align="start" spacing={2} fontSize="sm">
+                    <HStack>
+                      <Badge colorScheme="green">✓</Badge>
+                      <Text>Carga instantánea de gráficos de ganancias</Text>
+                    </HStack>
+                    <HStack>
+                      <Badge colorScheme="green">✓</Badge>
+                      <Text>Datos precisos de showdown/no-showdown</Text>
+                    </HStack>
+                    <HStack>
+                      <Badge colorScheme="green">✓</Badge>
+                      <Text>Actualización masiva desde archivos CSV</Text>
+                    </HStack>
+                    <HStack>
+                      <Badge colorScheme="green">✓</Badge>
+                      <Text>Compatible con todos los jugadores del sistema</Text>
+                    </HStack>
+                  </VStack>
+                </Box>
+
+                {/* Componente de gráficos */}
+                <GraficosCSVUpload />
+              </VStack>
             </TabPanel>
           </TabPanels>
         </Tabs>
