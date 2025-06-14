@@ -1,5 +1,6 @@
 const StatsCSVModel = require("../models/statsCSVModel");
 const { getDbToFrontendMapping, STATS_MAPPING } = require('../config/statsMapping');
+const GraficoModel = require('../models/graficoModel'); // NUEVO: Importar modelo de gráficos
 
 // 🧠 Cache en memoria (simple)
 const cache = new Map();
@@ -307,99 +308,67 @@ const getTopJugadoresPorStake = async (req, res) => {
   }
 };
 
-// ✨ Controlador de gráfico ACTUALIZADO para usar datos de CSV
+// ✨ Controlador de gráfico - MODIFICADO para usar query original de PostgreSQL
 const getGraficoGanancias = async (req, res) => {
   const { nombre } = req.params;
-  const { tipoPeriodo = 'total', sala, stake } = req.query;
 
   if (!nombre) {
     return res.status(400).json({ error: "El nombre del jugador es obligatorio." });
   }
 
-  // Validar sala si se proporciona
-  if (sala) {
-    const validacionSala = validarSala(sala);
-    if (!validacionSala.valido) {
-      return res.status(400).json({ error: validacionSala.error });
-    }
-  }
-
-  // Validar stake si se proporciona
-  if (stake) {
-    const validacionStake = validarStake(stake);
-    if (!validacionStake.valido) {
-      return res.status(400).json({ error: validacionStake.error });
-    }
-  }
-
   try {
-    console.log(`📈 Gráfico CSV: ${nombre} (${tipoPeriodo})${stake ? ` stake: ${stake}` : ''}`);
+    console.log(`📈 Generando gráfico de ganancias para: ${nombre}`);
     
-    // Para CSV, vamos a simular datos de gráfico basados en el histórico
-    let query = `
-      SELECT 
-        fecha_snapshot,
-        my_c_won as total_money_won,
-        hands as total_hands,
-        bb_100
-      FROM jugadores_stats_csv 
-      WHERE LOWER(jugador_nombre) = LOWER($1)
-      AND tipo_periodo = $2
-    `;
+    // Primero verificar si el jugador existe en la BD original
+    const jugadorExiste = await GraficoModel.verificarJugadorExiste(nombre);
     
-    const params = [nombre, tipoPeriodo];
-    let paramIndex = 3;
-    
-    if (sala) {
-      query += ` AND sala = $${paramIndex}`;
-      params.push(sala);
-      paramIndex++;
-    }
-    
-    if (stake) {
-      query += ` AND stake_category = $${paramIndex}`;
-      params.push(stake);
-      paramIndex++;
-    }
-    
-    query += ` ORDER BY fecha_snapshot ASC`;
-
-    const pool = require('../config/db');
-    const { rows } = await pool.query(query, params);
-
-    if (!rows || rows.length === 0) {
+    if (!jugadorExiste) {
+      console.log(`❌ Jugador ${nombre} no encontrado en BD para gráfico`);
       return res.status(404).json({ 
-        error: `No se encontraron datos de gráfico para ${nombre} en período ${tipoPeriodo}${stake ? ` y stake ${stake}` : ''}` 
+        error: `No se encontraron datos de gráfico para ${nombre}. El jugador puede no existir en la base de datos histórica.` 
       });
     }
 
-    // Crear datos de gráfico simulando progresión por fechas
+    // Obtener información básica del jugador
+    const infoJugador = await GraficoModel.obtenerInfoJugadorParaGrafico(nombre);
+    
+    // Obtener datos del gráfico usando el query original
+    const datosGrafico = await GraficoModel.obtenerGraficoGanancias(nombre);
+
+    if (!datosGrafico || datosGrafico.length === 0) {
+      return res.status(404).json({ 
+        error: `No se encontraron datos suficientes para generar el gráfico de ${nombre}` 
+      });
+    }
+
+    // Formatear datos para el frontend
     const handGroups = [];
     const totalMoneyWon = [];
     const totalMWNSD = [];
     const totalMWSD = [];
 
-    rows.forEach((fila, index) => {
-      handGroups.push(fila.total_hands);
-      totalMoneyWon.push(fila.total_money_won);
-      // Simular división showdown/no-showdown (aproximación)
-      totalMWNSD.push(fila.total_money_won * 0.6);
-      totalMWSD.push(fila.total_money_won * 0.4);
+    datosGrafico.forEach((punto) => {
+      handGroups.push(parseInt(punto.hand_group));
+      totalMoneyWon.push(parseFloat(punto.total_money_won) || 0);
+      totalMWNSD.push(parseFloat(punto.money_won_nosd) || 0);
+      totalMWSD.push(parseFloat(punto.money_won_sd) || 0);
     });
+
+    console.log(`✅ Gráfico generado: ${datosGrafico.length} puntos de datos`);
 
     res.status(200).json({
       handGroups,
       totalMoneyWon,
       totalMWNSD,
       totalMWSD,
-      data_source: 'CSV',
-      tipo_periodo: tipoPeriodo,
-      total_snapshots: rows.length,
-      stake: stake || 'todos'
+      playerInfo: infoJugador,
+      data_source: 'PostgreSQL', // Indicar que viene de la BD original
+      total_data_points: datosGrafico.length
     });
+
   } catch (error) {
-    console.error("❌ Error en gráfico CSV:", error);
-    res.status(500).json({ error: "Error interno del servidor." });
+    console.error("❌ Error en gráfico de ganancias:", error);
+    res.status(500).json({ error: "Error interno del servidor al generar el gráfico." });
   }
 };
 

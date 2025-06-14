@@ -187,56 +187,6 @@ const getJugadorData = async (nombre, sala, tipoPeriodo = 'total', fecha = null)
   return await StatsCSVModel.getJugador(nombre, sala, tipoPeriodo, fecha);
 };
 
-// ✨ Gráfico de ganancias usando CSV
-const obtenerGraficoGanancias = async (nombreJugador, tipoPeriodo = 'total') => {
-  try {
-    console.log(`📈 Gráfico CSV: ${nombreJugador} (${tipoPeriodo})`);
-    
-    // Obtener histórico del jugador en diferentes fechas
-    const query = `
-      SELECT 
-        fecha_snapshot,
-        my_c_won as total_money_won,
-        hands as total_hands,
-        bb_100
-      FROM jugadores_stats_csv 
-      WHERE LOWER(jugador_nombre) = LOWER($1)
-      AND tipo_periodo = $2
-      ORDER BY fecha_snapshot ASC
-    `;
-
-    const { rows } = await db.query(query, [nombreJugador, tipoPeriodo]);
-
-    if (!rows || rows.length === 0) {
-      return [];
-    }
-
-    // Crear datos de gráfico simulando progresión por fechas
-    const handGroups = [];
-    const totalMoneyWon = [];
-    const totalMWNSD = [];
-    const totalMWSD = [];
-
-    rows.forEach((fila, index) => {
-      handGroups.push(index * 100); // Simular grupos de 100 manos
-      totalMoneyWon.push(fila.total_money_won);
-      // Simular división showdown/no-showdown (aproximación)
-      totalMWNSD.push(fila.total_money_won * 0.6);
-      totalMWSD.push(fila.total_money_won * 0.4);
-    });
-
-    return {
-      handGroups,
-      totalMoneyWon,
-      totalMWNSD,
-      totalMWSD
-    };
-  } catch (error) {
-    console.error("❌ Error en gráfico CSV:", error);
-    throw error;
-  }
-};
-
 // ✨ Ranking por stake usando CSV
 const obtenerTopJugadoresPorStake = async (stakeCategory) => {
   const query = `
@@ -273,10 +223,12 @@ const obtenerTopJugadoresPorStake = async (stakeCategory) => {
   }
 };
 
+// NOTA: La función obtenerGraficoGanancias fue removida porque ahora 
+// los gráficos usan el query original de PostgreSQL a través de GraficoModel
+
 module.exports = { 
   getJugadorData, 
-  obtenerTopJugadoresPorStake, 
-  obtenerGraficoGanancias, 
+  obtenerTopJugadoresPorStake,
   interpretarJugadorData, 
   getJugadorSugerencias 
 };

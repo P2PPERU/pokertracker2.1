@@ -7,6 +7,7 @@ const { verificarToken, verificarAdmin } = require("../middleware/authMiddleware
 const MetricController = require("../controllers/metricController");
 const EventController = require("../controllers/eventController");
 const StatsCSVController = require("../controllers/statsCSVController");
+const GraficosCSVController = require("../controllers/graficosCSVController"); // NUEVO
 
 // ✅ Obtener lista de todos los usuarios con conteo de solicitudes IA usadas
 router.get("/usuarios", verificarToken, verificarAdmin, async (req, res) => {
@@ -150,5 +151,8 @@ router.get("/csv-dashboard", verificarToken, verificarAdmin, async (req, res) =>
   }
 });
 
+// 📊 RUTAS DE CSV DE GRÁFICOS - NUEVO
+router.post("/graficos-csv/upload", verificarToken, verificarAdmin, GraficosCSVController.uploadGraficosCSV);
+router.get("/graficos-csv/stats", verificarToken, verificarAdmin, GraficosCSVController.getGraficosStats);
 
 module.exports = router;
